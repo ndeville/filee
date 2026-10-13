@@ -1,0 +1,11 @@
+build/
+Filee.xcodeproj/
+FileeCore/.build/
+FileeCore/.swiftpm/
+.DS_Store
+__pycache__/
+output/*/qa/
+
+# Private, never pushed: signing identity, history backup, personal notes and scripts
+.private/
+CLAUDE.local.md

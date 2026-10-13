@@ -1,0 +1,62 @@
+name: Filee
+options:
+  bundleIdPrefix: com.nicolasdeville
+  deploymentTarget:
+    macOS: "26.0"
+  createIntermediateGroups: true
+packages:
+  FileeCore:
+    path: FileeCore
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    ARCHS: arm64
+    ONLY_ACTIVE_ARCH: YES
+    DEAD_CODE_STRIPPING: YES
+    ENABLE_HARDENED_RUNTIME: YES
+    # build.sh builds unsigned and signs afterwards (FILEE_SIGN_IDENTITY): no team in the project.
+    CODE_SIGN_STYLE: Manual
+targets:
+  Filee:
+    type: application
+    platform: macOS
+    sources:
+      - path: FileeMac/Sources
+      - path: FileeMac/Resources/AppIcon.icns
+        buildPhase: resources
+      - path: FileeMac/Resources/Logo.png
+        buildPhase: resources
+    dependencies:
+      - package: FileeCore
+    entitlements:
+      path: FileeMac/Filee.entitlements
+      properties:
+        com.apple.security.automation.apple-events: true
+    info:
+      path: FileeMac/Info.plist
+      properties:
+        CFBundleName: Filee
+        CFBundleDisplayName: Filee
+        CFBundleIdentifier: com.nicolasdeville.filee
+        CFBundleIconFile: AppIcon
+        CFBundlePackageType: APPL
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        LSApplicationCategoryType: public.app-category.productivity
+        LSMinimumSystemVersion: "26.0"
+        NSHighResolutionCapable: true
+        NSPrincipalClass: Filee.FileeApplication
+        NSSupportsAutomaticTermination: false
+        NSAppleEventsUsageDescription: Filee asks Finder to empty the Trash.
+        NSDesktopFolderUsageDescription: Filee lists the folders you open.
+        NSDocumentsFolderUsageDescription: Filee lists the folders you open.
+        NSDownloadsFolderUsageDescription: Filee lists the folders you open.
+        NSRemovableVolumesUsageDescription: Filee lists the volumes you open.
+        NSNetworkVolumesUsageDescription: Filee lists the volumes you open.
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: Folder
+            CFBundleTypeRole: Viewer
+            LSHandlerRank: Alternate
+            LSItemContentTypes: [public.folder]
