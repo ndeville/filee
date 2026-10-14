@@ -101,6 +101,8 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
     let tabStrip = TabStrip()
     let typeBar = TypeFilterBar()
     let pathField = PathField()
+    /// The path as clickable folders; the path field replaces it while a path is typed.
+    let crumbs = PathCrumbs()
     let countLabel = label("", size: 11, color: Theme.muted)
     // Type-to-filter shows what you type at the top of the pane: the query, a blinking caret, the count.
     let filterBar = ColorView(Theme.accentSoft)
@@ -149,6 +151,14 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
         pathField.cell?.usesSingleLineMode = true
         pathField.delegate = self
         pathField.onClick = { [weak self] in self?.editPath() }
+        pathField.isHidden = true
+        crumbs.onEdit = { [weak self] in self?.editPath() }
+        crumbs.onGo = { [weak self] p in self?.goFromCrumb(p) }
+        crumbs.onDrop = { [weak self] urls, folder, copy in
+            guard let self else { return false }
+            self.window.activate(pane: self.index)
+            return self.window.drop(urls: urls, into: folder, copy: copy)
+        }
         tabStrip.onSelect = { [weak self] i in self?.showTab(i) }
         tabStrip.onClose = { [weak self] i in self?.closeTab(i) }
         tabStrip.onNew = { [weak self] in self?.newTab() }
@@ -165,7 +175,7 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
         messageLabel.maximumNumberOfLines = 3
         messageLabel.lineBreakMode = .byWordWrapping
         messageLabel.isHidden = true
-        for v in [accentBar, tabStrip, typeBar, pathField, countLabel, contentHost, filterBar, messageLabel] as [NSView] { container.addSubview(v) }
+        for v in [accentBar, tabStrip, typeBar, crumbs, pathField, countLabel, contentHost, filterBar, messageLabel] as [NSView] { container.addSubview(v) }
         let click = NSClickGestureRecognizer(target: self, action: #selector(headerClicked))
         tabStrip.addGestureRecognizer(click)
         click.delaysPrimaryMouseButtonEvents = false
@@ -184,6 +194,7 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
         tabStrip.frame = NSRect(x: 0, y: accentH, width: b.width - typeW, height: tabH)
         let countW = min(160, textWidth(countLabel.stringValue, font: countLabel.font!) + 12)
         pathField.frame = NSRect(x: 10, y: accentH + tabH + 3, width: b.width - countW - 20, height: pathH - 6)
+        crumbs.frame = NSRect(x: 5, y: accentH + tabH + 2, width: b.width - countW - 15, height: pathH - 4)
         countLabel.frame = NSRect(x: b.width - countW - 6, y: accentH + tabH + 5, width: countW, height: pathH - 8)
         countLabel.alignment = .right
         let top = accentH + tabH + pathH
@@ -202,6 +213,7 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
         container.layer?.backgroundColor = Theme.bg.cgColor
         tabStrip.active = tabStrip.active
         typeBar.refresh()
+        crumbs.needsDisplay = true
         activeChanged()
     }
 
@@ -216,12 +228,7 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
 
     private func updatePathLabel() {
         guard !pathField.isEditable else { return }
-        let active = isActivePane
-        pathField.attributedStringValue = NSAttributedString(string: folderModel.displayPath, attributes: [
-            .font: Theme.ui(13, weight: active ? .bold : .regular),
-            .foregroundColor: active ? Theme.fg : Theme.muted,
-        ])
-        pathField.toolTip = "\(folderModel.path)\nClick to type or paste a path to go to."
+        crumbs.show(path: path, active: isActivePane)
     }
 
     private func updateCount() {
@@ -377,6 +384,15 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
         AppDelegate.shared.addRecent(p)
         AppDelegate.shared.scheduleMemoryRelief()
         window.stateChanged()
+    }
+
+    /// A click on a folder in the path: go there and select the folder we came from, as ⌘↑ does.
+    private func goFromCrumb(_ folder: String) {
+        window.activate(pane: index)
+        let base = folder == "/" ? "" : folder
+        let child = path.hasPrefix(base + "/") ? path.dropFirst(base.count + 1).split(separator: "/").first.map { base + "/" + $0 } : nil
+        navigate(to: folder, select: child.map { [$0] } ?? [])
+        focusContent()
     }
 
     func goUp() {
@@ -575,6 +591,8 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
         window.activate(pane: index)
         pathField.isEditable = true
         pathField.isSelectable = true
+        pathField.isHidden = false
+        crumbs.isHidden = true
         pathField.font = Theme.ui(13)
         pathField.textColor = Theme.fg
         pathField.stringValue = path.abbreviatingHome + (path == "/" ? "" : "/")
@@ -585,6 +603,8 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
     private func endPathEdit() {
         pathField.isEditable = false
         pathField.isSelectable = false
+        pathField.isHidden = true
+        crumbs.isHidden = false
         updatePathLabel()
         focusContent()
     }

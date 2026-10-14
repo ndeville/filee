@@ -298,11 +298,16 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         case "open": pane.openSelection()
         case "openWith": openWith()
         case "up": pane.goUp()
+        case "selectLast":
+            pane.fileView.selectLast()
+            pane.focusContent()
         case "back": pane.goBack()
         case "forward": pane.goForward()
         case "switchPane": switchPane()
         case "editPath": pane.editPath()
-        case "palette": showPalette()
+        case "palette":
+            // ⌘K again closes it.
+            if palette?.isVisible == true { palette?.close() } else { showPalette() }
         case "go":
             guard let a = args else { return false }
             pane.navigate(to: a)

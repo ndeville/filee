@@ -348,6 +348,15 @@ final class ColumnsView: NSObject, FileView, NSTableViewDataSource, NSTableViewD
         c.table.scrollRowToVisible(index)
     }
 
+    func selectLast() {
+        guard columns.indices.contains(focused) else { return }
+        let c = columns[focused]
+        let row = c.items.count - 1
+        guard row >= 0 else { return }
+        c.table.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+        c.table.scrollRowToVisible(row)
+    }
+
     var targetFolder: String {
         guard columns.indices.contains(focused) else { return delegate?.folderModel.path ?? NSHomeDirectory() }
         return columns[focused].folder

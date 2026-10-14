@@ -244,6 +244,8 @@ final class ThumbnailsView: NSObject, FileView, NSCollectionViewDataSource, NSCo
         selectionChanged()
     }
 
+    func selectLast() { selectVisible(items.count - 1) }
+
     var targetFolder: String { delegate?.folderModel.path ?? NSHomeDirectory() }
     func beginInlineRename() -> Bool { false }
     func expandSelected(_ expand: Bool) -> Bool { false }

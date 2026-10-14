@@ -467,6 +467,13 @@ final class ListView: NSObject, FileView, NSOutlineViewDataSource, NSOutlineView
         outline.scrollRowToVisible(row)
     }
 
+    func selectLast() {
+        let row = outline.numberOfRows - 1
+        guard row >= 0 else { return }
+        outline.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+        outline.scrollRowToVisible(row)
+    }
+
     var targetFolder: String {
         model?.path ?? NSHomeDirectory()
     }

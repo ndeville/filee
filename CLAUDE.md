@@ -13,7 +13,8 @@ FileeCore/        Swift package, no AppKit: DirectoryLister (getattrlistbulk), F
                   Unit tests in FileeCore/Tests.
 FileeMac/Sources/ AppKit app. AppDelegate (menus, config, state), BrowserWindow (commands, status bar),
                   Pane (tabs, path field, filter), FolderModel, ListView / ColumnsView / ThumbnailsView,
-                  Sidebar, Palette, RenameSheet, InfoPanel, Operations, ActionRunner, QuickLook, HotKey,
+                  Sidebar, Palette, PathCrumbs (the clickable path above each pane's files), RenameSheet, InfoPanel,
+                  Operations, ActionRunner, QuickLook, HotKey,
                   FileWatch (FSEvents), Commands (catalog + key map), QAHarness, Profile,
                   Toast (messages), TransferPanel (copy and move progress), TitleBar (logo, name, folder),
                   TypeFilterBar (the tab's file-type filter; the families are FileTypeFilter in FileeCore; each button shows the icon of the family's default app, loaded in the background: 75 ms).
@@ -62,6 +63,7 @@ cd FileeCore && swift test
 - Nic's builds sign with his Developer ID (from `.private/signing.env`), hardened runtime, bundle id `com.nicolasdeville.filee`. A stable signature keeps the Files and Folders and Full Disk Access grants across rebuilds. If `build.sh` warns "ad-hoc signature" on Nic's Mac, stop: `.private/signing.env` is missing.
 - App icons always carry Nic's logo (the NicAI edelweiss). Icons follow the NicAI app icon layout (full canvas, name under the art: see the nicai-design skill). Edit `assets/AppIcon-art.svg` and regenerate; the options and their generator are in `output/261010-app-icon-options/`.
 - ⌘H goes to the home folder, not Hide Filee (Nic's choice, 13th October 2026): the Hide menu item has no key.
+- ⌘↓ selects the last item (Nic's choice, 14th October 2026), not Open: ↩ and ⌘O open.
 - ⌘0 resets the zoom to the default size (`fontSize`, 14 pt). ⌘B, not ⌘0, toggles the sidebar. Tab names use the file list font and zoom with it.
 - Nic's global App Shortcuts: ⇧⌘F is Find, ⌥⌘F is Bring All to Front. Filee has neither menu item, so the key map gets both.
 - ⌘D and ⌘F are Copy and Paste through Nic's global App Shortcuts on the **Edit > Copy** and **Edit > Paste** menu titles. Never bind ⌘D or ⌘F in the key map, never rename those menu items.

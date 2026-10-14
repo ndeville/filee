@@ -13,6 +13,8 @@ protocol FileView: AnyObject {
     func select(paths: [String], scroll: Bool)
     /// Selects the row at `index` of the visible list (the filter's best match).
     func selectVisible(_ index: Int)
+    /// Selects the last row on screen (⌘↓), inside open folders too.
+    func selectLast()
     /// The folder new items, pastes and drops go to. Columns: the deepest folder in focus.
     var targetFolder: String { get }
     /// Inline rename of the single selected item. False when the view has no inline editor.

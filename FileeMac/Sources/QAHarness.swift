@@ -216,6 +216,39 @@ final class QAHarness {
             record(step)
             done()
 
+        case "paletteKey":
+            // A key pressed in the open palette, with the keyboard in the "field" or the "list" (after a click on a row).
+            guard let panel = wc.palette?.qaPanel, panel.isVisible, let ev = keyEvent(step["keys"] as? String ?? "", window: panel) else {
+                record(step, ok: false)
+                done()
+                return
+            }
+            if step["focus"] as? String == "list" { wc.palette?.qaFocusList() }
+            // As NSApplication does: the key window's key equivalents first, then the first responder.
+            if !(ev.modifierFlags.contains(.command) && panel.performKeyEquivalent(with: ev)) { panel.sendEvent(ev) }
+            record(step)
+            done()
+
+        case "paletteResign":
+            // Another window or app takes the keyboard (a click outside the palette).
+            wc.palette?.qaPanel.resignKey()
+            record(step)
+            done()
+
+        case "crumb":
+            // A click on a folder in the pane's path ("" for the free space after it), or a drop of "drop" paths on it.
+            let p = pane(step)
+            let title = step["title"] as? String ?? ""
+            var ok: Bool
+            if let paths = step["drop"] as? [String] {
+                ok = p.crumbs.qaDrop(paths.map { $0.expandingHome }, on: title, copy: step["copy"] as? Bool ?? false)
+                if step["refused"] as? Bool == true { ok = !ok }
+            } else {
+                ok = p.crumbs.qaClick(title)
+            }
+            record(step, ok: ok, ["crumbs": p.crumbs.titles])
+            done()
+
         case "renameFill":
             record(step, ok: RenameSheet.qaFill(base: step["base"] as? String ?? ""))
             done()
@@ -300,8 +333,9 @@ final class QAHarness {
             let targets: [String: NSView] = ["titleCopy": wc.titleBar.copyButton, "titleTheme": wc.titleBar.themeButton]
             let target = step["target"] as? String ?? ""
             let typeButton = target.hasPrefix("type:") ? FileTypeFilter(rawValue: String(target.dropFirst(5))).flatMap { p.typeBar.button(for: $0) } : nil
-            let view = targets[target] ?? typeButton ?? p.pathField
-            let point = view.convert(NSPoint(x: view.bounds.midX, y: view.bounds.midY), to: nil)
+            let view = targets[target] ?? typeButton ?? (p.pathField.isHidden ? p.crumbs : p.pathField)
+            // The path: the free space after the last folder, where a click opens it for typing.
+            let point = view.convert(NSPoint(x: view === p.crumbs ? view.bounds.maxX - 2 : view.bounds.midX, y: view.bounds.midY), to: nil)
             Clipboard.board.clearContents()
             func mouse(_ type: NSEvent.EventType) -> NSEvent? {
                 NSEvent.mouseEvent(with: type, location: point, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
@@ -384,6 +418,7 @@ final class QAHarness {
         if let e = step["missing"] as? [String] { ok = ok && e.allSatisfy { !FileManager.default.fileExists(atPath: $0.expandingHome) } }
         if let s = step["selected"] as? [String] { ok = ok && names(p.selectedItems) == s }
         if let n = step["selectedCount"] as? Int { ok = ok && p.selectedItems.count == n }
+        if step["selectedLast"] as? Bool == true { ok = ok && names(p.selectedItems) == [p.folderModel.visible.last?.name ?? "?"] }
         if let v = step["visible"] as? Int { ok = ok && p.folderModel.visible.count == v }
         if let s = step["sidebar"] as? Bool { ok = ok && wc.sidebarVisible == s && wc.sidebar.scroll.isHidden == !s }
         if let z = step["zoom"] as? Int {
@@ -393,7 +428,10 @@ final class QAHarness {
         }
         if let t = step["types"] as? String { ok = ok && p.folderModel.types.rawValue == t && p.typeBar.selected.rawValue == t }
         if let r = step["renaming"] as? Bool { ok = ok && ((p.fileView as? ListView)?.isRenaming ?? false) == r }
-        if let e = step["pathEditing"] as? Bool { ok = ok && p.pathField.isEditable == e }
+        if let e = step["pathEditing"] as? Bool { ok = ok && p.pathField.isEditable == e && p.crumbs.isHidden == e }
+        if let v = step["palette"] as? Bool { ok = ok && (wc.palette?.isVisible ?? false) == v }
+        if let c = step["crumbs"] as? [String] { ok = ok && p.crumbs.titles == c }
+        if let c = step["crumbsEnd"] as? [String] { ok = ok && Array(p.crumbs.titles.suffix(c.count)) == c }
         if let c = step["clipboard"] as? String { ok = ok && Clipboard.board.string(forType: .string) == c.expandingHome }
         if let n = step["rows"] as? Int { ok = ok && ((p.fileView as? ListView)?.outline.numberOfRows ?? -1) == n }
         if let path = step["path"] as? String { ok = ok && p.path == canonicalFolder(path.expandingHome) }
@@ -518,8 +556,13 @@ final class QAHarness {
     // MARK: Keys
 
     private func sendKey(_ spec: String) {
-        guard let chord = KeyChord(spec) ?? (spec.count == 1 ? KeyChord(key: spec.lowercased(), shift: spec != spec.lowercased()) : nil),
-              let window = wc.window else { return }
+        guard let window = wc.window, let ev = keyEvent(spec, window: window) else { return }
+        if Keymap.shared.handle(ev) { return }
+        window.sendEvent(ev)
+    }
+
+    private func keyEvent(_ spec: String, window: NSWindow) -> NSEvent? {
+        guard let chord = KeyChord(spec) ?? (spec.count == 1 ? KeyChord(key: spec.lowercased(), shift: spec != spec.lowercased()) : nil) else { return nil }
         let codes: [String: UInt16] = [
             "enter": 36, "tab": 48, "space": 49, "backspace": 51, "escape": 53, "left": 123, "right": 124, "down": 125, "up": 126,
             "f1": 122, "f5": 96, "f6": 97, "home": 115, "end": 119,
@@ -549,11 +592,9 @@ final class QAHarness {
         }
         let typed = chord.shift && chars.count == 1 ? chars.uppercased() : chars
         let keyCode = codes[chord.key] ?? Self.keyCode(for: chord.key)
-        guard let ev = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: flags, timestamp: ProcessInfo.processInfo.systemUptime,
-                                        windowNumber: window.windowNumber, context: nil, characters: typed,
-                                        charactersIgnoringModifiers: chars, isARepeat: false, keyCode: keyCode) else { return }
-        if Keymap.shared.handle(ev) { return }
-        window.sendEvent(ev)
+        return NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: flags, timestamp: ProcessInfo.processInfo.systemUptime,
+                                windowNumber: window.windowNumber, context: nil, characters: typed,
+                                charactersIgnoringModifiers: chars, isARepeat: false, keyCode: keyCode)
     }
 
     private static func keyCode(for key: String) -> UInt16 {

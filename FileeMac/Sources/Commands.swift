@@ -14,9 +14,9 @@ enum CommandCatalog {
         // Navigation
         .init(id: "open", title: "Open", key: "enter", args: nil),
         .init(id: "open", title: "Open", key: "cmd+o", args: nil),
-        .init(id: "open", title: "Open", key: "cmd+down", args: nil),
         .init(id: "openWith", title: "Open With…", key: nil, args: nil),
         .init(id: "up", title: "Enclosing Folder", key: "cmd+up", args: nil),
+        .init(id: "selectLast", title: "Select Last Item", key: "cmd+down", args: nil),
         .init(id: "back", title: "Back", key: "cmd+[", args: nil),
         .init(id: "forward", title: "Forward", key: "cmd+]", args: nil),
         .init(id: "switchPane", title: "Switch Active Pane", key: "tab", args: nil),
@@ -113,7 +113,7 @@ enum CommandCatalog {
     ]
 
     /// Commands that act on text being edited stay with the text: Filee doesn't catch them then.
-    static let textCommands: Set<String> = ["selectAll", "undo", "redo"]
+    static let textCommands: Set<String> = ["selectAll", "undo", "redo", "selectLast"]
 
     static func title(_ id: String, args: String?) -> String {
         all.first { $0.id == id && $0.args == args }?.title ?? all.first { $0.id == id }?.title ?? id

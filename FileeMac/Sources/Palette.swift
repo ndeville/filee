@@ -2,7 +2,7 @@ import AppKit
 import FileeCore
 
 /// ⌘K: 1 box for commands, actions, favourites, recent folders and the current folder's items (SPEC 4.3).
-final class PaletteController: NSObject, NSTextFieldDelegate, NSTableViewDataSource, NSTableViewDelegate {
+final class PaletteController: NSObject, NSTextFieldDelegate, NSTableViewDataSource, NSTableViewDelegate, NSWindowDelegate {
     enum Mode {
         case commands
         /// Pick a folder for a copy or move (F5/F6 with 1 pane shown).
@@ -20,7 +20,7 @@ final class PaletteController: NSObject, NSTextFieldDelegate, NSTableViewDataSou
     }
 
     unowned let window: BrowserWindowController
-    private let panel: NSPanel
+    private let panel: PalettePanel
     private let field = NSTextField()
     private let table = NSTableView()
     private let scroll = NSScrollView()
@@ -30,8 +30,10 @@ final class PaletteController: NSObject, NSTextFieldDelegate, NSTableViewDataSou
 
     init(window: BrowserWindowController) {
         self.window = window
-        panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 640, height: 420), styleMask: [.titled, .fullSizeContentView], backing: .buffered, defer: true)
+        panel = PalettePanel(contentRect: NSRect(x: 0, y: 0, width: 640, height: 420), styleMask: [.titled, .fullSizeContentView], backing: .buffered, defer: true)
         super.init()
+        panel.delegate = self
+        panel.onClose = { [weak self] in self?.close() }
         panel.titleVisibility = .hidden
         panel.titlebarAppearsTransparent = true
         panel.isFloatingPanel = true
@@ -115,10 +117,18 @@ final class PaletteController: NSObject, NSTextFieldDelegate, NSTableViewDataSou
         panel.makeFirstResponder(field)
     }
 
-    func close() {
+    /// `refocus`: give the keyboard back to the browser window. Not when another window or app took it.
+    func close(refocus: Bool = true) {
+        guard panel.isVisible || panel.parent != nil else { return }
         panel.parent?.removeChildWindow(panel)
         panel.orderOut(nil)
-        window.window?.makeKeyAndOrderFront(nil)
+        if refocus { window.window?.makeKeyAndOrderFront(nil) }
+    }
+
+    /// A click in the browser window, another window or another app closes the palette: it never stays behind
+    /// without the keyboard, where Esc can't reach it.
+    func windowDidResignKey(_ notification: Notification) {
+        close(refocus: false)
     }
 
     private func buildEntries() -> [Entry] {
@@ -167,6 +177,8 @@ final class PaletteController: NSObject, NSTextFieldDelegate, NSTableViewDataSou
 
     /// For QA: the panel's window, and a typed query without key presses.
     var qaPanel: NSWindow { panel }
+    /// For QA: the keyboard in the list, as after a click on a row.
+    func qaFocusList() { panel.makeFirstResponder(table) }
     func qaType(_ text: String) {
         field.stringValue = text
         filter()
@@ -233,6 +245,25 @@ final class PaletteController: NSObject, NSTextFieldDelegate, NSTableViewDataSou
         cell.title.stringValue = e.title
         cell.show(detail: e.detail, asKey: e.kind == .command)
         return cell
+    }
+}
+
+/// The palette's window. Esc closes it wherever the keyboard is (the field or the list), and so do ⌘W, ⌘K and ⌘.
+/// The panel has no close button, so NSPanel's own Esc would only beep.
+private final class PalettePanel: NSPanel {
+    var onClose: (() -> Void)?
+
+    override var canBecomeKey: Bool { true }
+
+    override func cancelOperation(_ sender: Any?) { onClose?() }
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        if flags == .command, let c = event.charactersIgnoringModifiers?.lowercased(), ["w", "k", "."].contains(c) {
+            onClose?()
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
     }
 }
 
