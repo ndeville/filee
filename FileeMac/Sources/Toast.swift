@@ -13,7 +13,6 @@ final class Toast: FlippedView {
     override init(frame: NSRect) {
         super.init(frame: frame)
         wantsLayer = true
-        layer?.cornerRadius = 12
         shadow = NSShadow()
         layer?.shadowOpacity = 0.25
         layer?.shadowRadius = 12
@@ -82,6 +81,7 @@ final class Toast: FlippedView {
         let w = min(anchor.maxWidth, max(tw, dw) + pad * 2 + 4)
         let h: CGFloat = hasDetail ? 56 : 38
         frame = NSRect(x: (anchor.x - w / 2).rounded(), y: anchor.bottom - h, width: w, height: h)
+        layer?.cornerRadius = min(Theme.radius(12), h / 2)
         title.frame = NSRect(x: pad, y: hasDetail ? 9 : 10, width: w - pad * 2, height: 19)
         detail.frame = NSRect(x: pad, y: 31, width: w - pad * 2, height: 16)
     }

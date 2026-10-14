@@ -64,7 +64,7 @@ final class TabStrip: FlippedView {
             b.tag = i
             b.isBordered = false
             b.wantsLayer = true
-            b.layer?.cornerRadius = 4
+            b.layer?.cornerRadius = Theme.radius()
             let isActive = i == active
             b.layer?.backgroundColor = (isActive ? Theme.surface2 : NSColor.clear).cgColor
             b.attributedTitle = NSAttributedString(string: t, attributes: [
@@ -496,8 +496,11 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
     }
 
     func styleChanged() {
+        // The views reload their rows: the selection comes back after (zoom, settings.json).
+        let selected = fileView.selectedItems.map(\.path)
         for v in views.values { v.styleChanged() }
         fileView.modelChanged(reloaded: false)
+        if fileView.selectedItems.isEmpty && !selected.isEmpty { fileView.select(paths: selected, scroll: false) }
         updatePathLabel()
         crumbs.styleChanged()
         // The tab names, the path and the type filter follow the file list's size.

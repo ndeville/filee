@@ -58,7 +58,7 @@ final class FileRowView: NSTableRowView {
         let color = activePane ? Theme.accentFill : Theme.selectionInactive
         color.setFill()
         let r = bounds.insetBy(dx: 4, dy: 1)
-        NSBezierPath(roundedRect: r, xRadius: 4, yRadius: 4).fill()
+        NSBezierPath(roundedRect: r, xRadius: Theme.radius(), yRadius: Theme.radius()).fill()
     }
 
     override var isEmphasized: Bool {

@@ -63,6 +63,10 @@ enum Theme {
 
     static var listSize: CGFloat { (CGFloat(settings.fontSize) * zoom).rounded() }
     static var rowHeight: CGFloat { (listSize * 1.7).rounded() }
+    /// A highlight's corner radius (selection, current folder, tab, buttons): `base` at the default cornerRadius of 4,
+    /// scaled by settings.json "cornerRadius". 0 draws square corners.
+    static func radius(_ base: CGFloat = 4) -> CGFloat { base * CGFloat(settings.cornerRadius) / 4 }
+
     /// The pane's tab strip: the tab names use the file list's font and size.
     static var tabHeight: CGFloat { max(30, (listSize * 2.1).rounded()) }
 

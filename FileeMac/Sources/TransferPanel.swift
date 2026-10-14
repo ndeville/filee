@@ -23,7 +23,7 @@ final class TransferPanel: FlippedView {
             detail.alignment = .right
             for bar in [track, fill] {
                 bar.wantsLayer = true
-                bar.layer?.cornerRadius = 4
+                bar.layer?.cornerRadius = Theme.radius()
                 bar.layer?.masksToBounds = true
             }
             for v in [title, detail, track, fill, cancel] as [NSView] { addSubview(v) }

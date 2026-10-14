@@ -7,7 +7,7 @@ import ImageIO
 final class InfoPanel: NSObject {
     static let shared = InfoPanel()
 
-    private let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 420, height: 360), styleMask: [.titled, .closable, .utilityWindow], backing: .buffered, defer: true)
+    private let panel = FileePanel(contentRect: NSRect(x: 0, y: 0, width: 420, height: 360), styleMask: [.titled, .closable, .utilityWindow], backing: .buffered, defer: true)
     private let text = NSTextView()
     private var generation = 0
 

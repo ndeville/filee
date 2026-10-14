@@ -250,7 +250,7 @@ final class PaletteController: NSObject, NSTextFieldDelegate, NSTableViewDataSou
 
 /// The palette's window. Esc closes it wherever the keyboard is (the field or the list), and so do ⌘W, ⌘K and ⌘.
 /// The panel has no close button, so NSPanel's own Esc would only beep.
-private final class PalettePanel: NSPanel {
+private final class PalettePanel: FileePanel {
     var onClose: (() -> Void)?
 
     override var canBecomeKey: Bool { true }
@@ -284,7 +284,7 @@ private final class PaletteCell: NSTableCellView {
         title.lineBreakMode = .byTruncatingTail
         detail.alignment = .right
         cap.wantsLayer = true
-        cap.layer?.cornerRadius = 4
+        cap.layer?.cornerRadius = Theme.radius()
         for v in [icon, title, cap, detail] { addSubview(v) }
     }
 
@@ -297,6 +297,7 @@ private final class PaletteCell: NSTableCellView {
         detail.alignment = isKey ? .center : .right
         cap.isHidden = !isKey
         cap.layer?.backgroundColor = Theme.surface2.cgColor
+        cap.layer?.cornerRadius = Theme.radius()
         needsLayout = true
     }
 

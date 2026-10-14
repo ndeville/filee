@@ -153,16 +153,16 @@ final class PathCrumbs: NSView {
             if current, i != dropIndex {
                 // The current folder, as a selected row: red in the active pane, grey in the other.
                 (active ? Theme.accentFill : Theme.selectionInactive).setFill()
-                NSBezierPath(roundedRect: box, xRadius: 4, yRadius: 4).fill()
+                NSBezierPath(roundedRect: box, xRadius: Theme.radius(), yRadius: Theme.radius()).fill()
             } else if i == dropIndex {
                 Theme.accentSoft.setFill()
                 Theme.accent.setStroke()
-                let p = NSBezierPath(roundedRect: box.insetBy(dx: 0.5, dy: 0.5), xRadius: 4, yRadius: 4)
+                let p = NSBezierPath(roundedRect: box.insetBy(dx: 0.5, dy: 0.5), xRadius: Theme.radius(), yRadius: Theme.radius())
                 p.fill()
                 p.stroke()
             } else if i == hover, !current {
                 Theme.surface2.setFill()
-                NSBezierPath(roundedRect: box, xRadius: 4, yRadius: 4).fill()
+                NSBezierPath(roundedRect: box, xRadius: Theme.radius(), yRadius: Theme.radius()).fill()
             }
             var x = c.rect.minX + pad
             if let s = c.symbol, let img = icon(s) {

@@ -127,6 +127,7 @@ Run any program or script on the selection from a key, the palette or the contex
 - **Light and dark** follow macOS, or pin one with ⌃⌘L.
 - **Zoom** the file list, the tab names and the type icons with ⌘+ and ⌘-. ⌘0 goes back to the default size.
 - **Your fonts** for the file list and the interface, set in `settings.json`.
+- **Square or rounded:** `windowCorners` squares the window, `cornerRadius` sets the corners of the selection and the other highlights, from 0 to 10.
 - **A global hotkey** (⌃⌥⌘F) brings Filee to the front from any app.
 - **Every key is yours:** `keybindings.json` uses the VS Code format, and vim keys are 1 setting away.
 
@@ -243,7 +244,7 @@ The full list is in **Filee > Keyboard Shortcuts…**, in the palette and in `SP
 
 | File               | Holds                                                                     |
 | -                  | -                                                                         |
-| `settings.json`    | Fonts, favourites, jumps, columns, default view, terminal, volume icons   |
+| `settings.json`    | Fonts, favourites, jumps, columns, default view, terminal, icons, corners |
 | `keybindings.json` | Your keys, in the VS Code format, on top of the defaults                  |
 | `actions.json`     | Custom actions                                                            |
 | `state.json`       | Windows, tabs, views per folder, recent folders and the drop stack        |

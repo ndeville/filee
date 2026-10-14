@@ -14,6 +14,7 @@ FileeCore/        Swift package, no AppKit: DirectoryLister (getattrlistbulk), F
 FileeMac/Sources/ AppKit app. AppDelegate (menus, config, state), BrowserWindow (commands, status bar),
                   Pane (tabs, path field, filter), FolderModel, ListView / ColumnsView / ThumbnailsView,
                   Sidebar, Palette, PathCrumbs (the clickable path above each pane's files), RenameSheet, InfoPanel,
+                  Corners (FileeWindow and FileePanel: square window corners from settings.json),
                   Operations, ActionRunner, QuickLook, HotKey,
                   FileWatch (FSEvents), Commands (catalog + key map), QAHarness, Profile,
                   Toast (messages), TransferPanel (copy and move progress), TitleBar (logo, name, folder),
@@ -96,6 +97,10 @@ cd FileeCore && swift test
 - Plain keys go to the sidebar while it has the keyboard: `Keymap.handle` steps aside for `SidebarOutline`, else ↩ would open the pane's selection.
 - The sidebar outline draws its own chevrons and indents (`SidebarOutline`): `frameOfOutlineCell` is zero and every cell gets the full row width.
 - `cacheDisplay` (QA screenshots) draws the inactive pane's 85% alpha as grey. The real window is correct.
+- Square windows (`windowCorners`): macOS 26 has no public API. `FileeWindow` and `FileePanel` answer AppKit's private `_cornerMask`
+  with a 3 px square image; `_cornerMaskChanged` applies a change live. Overriding `_cornerRadius` on the window does nothing, and
+  swapping the theme frame's class crashes (NSDynamicProperties). Every Filee window and panel must use these 2 classes.
+- `reloadData` in the list loses the selection: `Pane.styleChanged` selects the same paths again (zoom, settings.json).
 
 ## Facts
 

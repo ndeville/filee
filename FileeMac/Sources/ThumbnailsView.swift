@@ -43,7 +43,7 @@ final class ThumbItem: NSCollectionViewItem {
     override func loadView() {
         let v = FlippedView()
         v.wantsLayer = true
-        v.layer?.cornerRadius = 6
+        v.layer?.cornerRadius = Theme.radius(6)
         thumb.imageScaling = .scaleProportionallyUpOrDown
         name.alignment = .center
         name.lineBreakMode = .byTruncatingMiddle
@@ -72,6 +72,7 @@ final class ThumbItem: NSCollectionViewItem {
     override var isSelected: Bool { didSet { updateSelection() } }
 
     func updateSelection() {
+        view.layer?.cornerRadius = Theme.radius(6)
         view.layer?.backgroundColor = isSelected ? (activePane ? Theme.accentFill : Theme.selectionInactive).cgColor : NSColor.clear.cgColor
         name.textColor = isSelected && activePane ? .white : Theme.fg
     }

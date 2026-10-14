@@ -32,7 +32,7 @@ final class RenameSheet: NSObject, NSTableViewDataSource, NSTableViewDelegate, N
     private init(paths: [String], browser: BrowserWindowController) {
         self.paths = paths
         self.browser = browser
-        sheet = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 760, height: 520), styleMask: [.titled], backing: .buffered, defer: true)
+        sheet = FileeWindow(contentRect: NSRect(x: 0, y: 0, width: 760, height: 520), styleMask: [.titled], backing: .buffered, defer: true)
         super.init()
         build()
         update()

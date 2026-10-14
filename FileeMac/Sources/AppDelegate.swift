@@ -147,6 +147,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let problems = [err, aerr].compactMap { $0 } + Keymap.shared.errors
         if let p = problems.first { activeWindow?.showMessage("❌ \(p)", error: true) }
         if changed {
+            WindowCorners.refresh()
             for w in windows {
                 for p in w.panes { p.styleChanged() }
                 w.sidebar.reload()

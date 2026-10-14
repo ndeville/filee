@@ -88,7 +88,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     init(state: AppState) {
         let frame = state.frame.map { NSRectFromString($0) } ?? NSRect(x: 0, y: 0, width: 1500, height: 1000)
         var t0 = Profile.now
-        let window = NSWindow(contentRect: frame, styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+        let window = FileeWindow(contentRect: frame, styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
                               backing: .buffered, defer: false)
         window.minSize = NSSize(width: 640, height: 360)
         window.title = "Filee"

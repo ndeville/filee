@@ -140,6 +140,34 @@ final class QAHarness {
                 done()
             }
 
+        case "settings":
+            // Writes keys into settings.json, as Nic would in an editor, and waits for Filee to reload it.
+            let url = AppDelegate.shared.config.settingsURL
+            let set = step["set"] as? [String: Any] ?? [:]
+            var json = (try? Data(contentsOf: url)).flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] } ?? [:]
+            json.merge(set) { _, new in new }
+            if let data = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted]) { try? data.write(to: url) }
+            let start = Date()
+            func poll() {
+                let s = Theme.settings
+                let loaded = set.allSatisfy { k, v in
+                    switch k {
+                    case "windowCorners": return s.windowCorners == v as? String
+                    case "cornerRadius": return s.cornerRadius == (v as? NSNumber)?.doubleValue
+                    default: return true
+                    }
+                }
+                if loaded || Date().timeIntervalSince(start) > 5 {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        self.record(step, ok: loaded)
+                        done()
+                    }
+                } else {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: poll)
+                }
+            }
+            poll()
+
         case "waitIdle":
             // Until no operation runs (copy, move), then 1 more turn for the reload.
             let start = Date()
@@ -427,6 +455,13 @@ final class QAHarness {
                 && p.tabStrip.titleFontSize == Theme.listSize && p.typeBar.buttonHeight == Theme.tabHeight - 4
                 && p.crumbs.fontSize == Theme.listSize
         }
+        if let c = step["corners"] as? String, let w = wc.window {
+            // Square: the window answers with the 3 px mask. Rounded: with AppKit's own, which is larger.
+            let mask = w.perform(WindowCorners.maskSelector)?.takeUnretainedValue() as? NSImage
+            ok = ok && Theme.settings.windowCorners == c && (c == "square" ? mask?.size == NSSize(width: 3, height: 3) : (mask?.size.width ?? 0) > 3)
+        }
+        if let r = step["radius"] as? Double { ok = ok && Theme.radius() == CGFloat(r) && Theme.radius(12) == CGFloat(r * 3) }
+        if let s = step["sidebarSelected"] as? String { ok = ok && wc.sidebar.selectedRow?.path == canonicalFolder(s.expandingHome) }
         if let t = step["types"] as? String { ok = ok && p.folderModel.types.rawValue == t && p.typeBar.selected.rawValue == t }
         if let r = step["renaming"] as? Bool { ok = ok && ((p.fileView as? ListView)?.isRenaming ?? false) == r }
         if let e = step["pathEditing"] as? Bool { ok = ok && p.pathField.isEditable == e && p.crumbs.isHidden == e }

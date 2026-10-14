@@ -147,6 +147,7 @@ final class SidebarController: NSObject, NSOutlineViewDataSource, NSOutlineViewD
 
     func reload() {
         let app = AppDelegate.shared!
+        let kept = selectedRow.map { (kind: $0.kind, path: $0.path) }
         let favourites = Theme.settings.favourites.map { (name: $0.name, path: $0.path.expandingHome) }
         sections[0].rows = FavouriteTree.build(favourites, home: NSHomeDirectory()).map { row(for: $0, level: 0) }
         // Volume names and free space are slow on network shares (100+ ms): the list shows at once,
@@ -184,6 +185,14 @@ final class SidebarController: NSObject, NSOutlineViewDataSource, NSOutlineViewD
         for s in sections { outline.expandItem(s) }
         expandFavourites(sections[0].rows, collapsed: Set(app.state.collapsedFavourites))
         restoring = false
+        // A settings change or a new volume keeps the selected row.
+        if let kept {
+            for i in 0..<outline.numberOfRows {
+                guard let r = outline.item(atRow: i) as? Row, r.kind == kept.kind, r.path == kept.path else { continue }
+                outline.selectRowIndexes([i], byExtendingSelection: false)
+                break
+            }
+        }
     }
 
     private func row(for node: FavouriteNode, level: Int) -> Row {
@@ -256,6 +265,7 @@ final class SidebarController: NSObject, NSOutlineViewDataSource, NSOutlineViewD
 
     func outlineView(_ outlineView: NSOutlineView, isGroupItem item: Any) -> Bool { item is Section }
     func outlineView(_ outlineView: NSOutlineView, shouldSelectItem item: Any) -> Bool { item is Row }
+    func outlineView(_ outlineView: NSOutlineView, rowViewForItem item: Any) -> NSTableRowView? { SidebarRowView() }
 
     func outlineView(_ outlineView: NSOutlineView, heightOfRowByItem item: Any) -> CGFloat {
         item is Section ? SidebarMetrics.headerHeight : SidebarMetrics.rowHeight
@@ -457,6 +467,20 @@ extension SidebarController: NSMenuDelegate {
 
 /// A sidebar row: chevron, icon, name, then free space and an eject button at the right edge.
 /// Laid out from its own bounds: the cell starts at width 0 and grows to the column.
+/// The sidebar's selection, drawn like the file list's: red while the sidebar has the keyboard, grey when not.
+/// Its corners follow settings.json "cornerRadius" (the system's source list selection is always rounded).
+final class SidebarRowView: NSTableRowView {
+    override func drawSelection(in dirtyRect: NSRect) {
+        guard selectionHighlightStyle != .none else { return }
+        (isEmphasized ? Theme.accentFill : Theme.selectionInactive).setFill()
+        NSBezierPath(roundedRect: bounds.insetBy(dx: 6, dy: 1), xRadius: Theme.radius(), yRadius: Theme.radius()).fill()
+    }
+
+    override var interiorBackgroundStyle: NSView.BackgroundStyle {
+        isSelected && isEmphasized ? .emphasized : .normal
+    }
+}
+
 final class SidebarCell: NSTableCellView {
     let icon = NSImageView()
     let name = label("", size: SidebarMetrics.font, color: Theme.fg)
@@ -477,6 +501,26 @@ final class SidebarCell: NSTableCellView {
     }
 
     required init?(coder: NSCoder) { fatalError() }
+
+    /// The colours set by the sidebar, kept while the row is selected in red.
+    private var normal: (name: NSColor?, detail: NSColor?, tint: NSColor?)?
+
+    /// White text and icon on the red selection.
+    override var backgroundStyle: NSView.BackgroundStyle {
+        didSet {
+            if backgroundStyle == .emphasized {
+                if normal == nil { normal = (name.textColor, detail?.textColor, icon.contentTintColor) }
+                name.textColor = .white
+                detail?.textColor = .white
+                if normal?.tint != nil { icon.contentTintColor = .white }
+            } else if let n = normal {
+                name.textColor = n.name
+                detail?.textColor = n.detail
+                icon.contentTintColor = n.tint
+                normal = nil
+            }
+        }
+    }
 
     func setExpanded(_ expanded: Bool) {
         chevron?.image = Icons.symbol(expanded ? "chevron.down" : "chevron.right")

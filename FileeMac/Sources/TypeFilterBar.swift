@@ -20,7 +20,7 @@ final class TypeFilterBar: FlippedView {
             b.setButtonType(.momentaryChange)
             b.toolTip = f == .all ? "Show all files" : "Show only \(f.title) files. Folders stay"
             b.wantsLayer = true
-            b.layer?.cornerRadius = 5
+            b.layer?.cornerRadius = Theme.radius(5)
             addSubview(b)
             buttons.append(b)
         }
@@ -33,9 +33,12 @@ final class TypeFilterBar: FlippedView {
     /// Buttons fill the tab strip's height, which follows the file list's font size (⌘+ and ⌘-).
     private var size: CGFloat { Theme.tabHeight - 4 }
 
-    /// Zoom changed: new icon sizes.
+    /// Zoom or settings changed: new icon sizes and corners.
     func styleChanged() {
-        for (i, f) in FileTypeFilter.allCases.enumerated() { buttons[i].image = Self.image(for: f, size: size - 4) }
+        for (i, f) in FileTypeFilter.allCases.enumerated() {
+            buttons[i].image = Self.image(for: f, size: size - 4)
+            buttons[i].layer?.cornerRadius = Theme.radius(5)
+        }
         needsLayout = true
     }
 

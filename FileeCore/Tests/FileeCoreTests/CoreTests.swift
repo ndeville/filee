@@ -333,6 +333,19 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(store.loadState().recent, ["/tmp"])
     }
 
+    func testCornerSettings() throws {
+        let decode = { (json: String) in try JSONDecoder().decode(Settings.self, from: Data(json.utf8)) }
+        let d = try decode("{}")
+        XCTAssertEqual(d.windowCorners, "rounded")
+        XCTAssertEqual(d.cornerRadius, 4)
+        let s = try decode(#"{"windowCorners": "square", "cornerRadius": 0}"#)
+        XCTAssertEqual(s.windowCorners, "square")
+        XCTAssertEqual(s.cornerRadius, 0)
+        let odd = try decode(#"{"windowCorners": "oval", "cornerRadius": 40}"#)
+        XCTAssertEqual(odd.windowCorners, "rounded")
+        XCTAssertEqual(odd.cornerRadius, 10)
+    }
+
     func testKeybindingParser() {
         let defaults = [KeyBinding(chords: [KeyChord("cmd+r")!], command: "rename")]
         let json = #"[{"key": "cmd+j k", "command": "jump", "args": "~/x"}, {"key": "cmd+r", "command": "-rename"}]"#

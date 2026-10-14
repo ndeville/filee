@@ -40,6 +40,10 @@ public struct Settings: Codable, Equatable, Sendable {
     public var sidebarFontSize: Double
     /// Volume name -> SF Symbol name or image file, to replace the icon Filee picks ("Omarchy": "terminal").
     public var volumeIcons: [String: String]
+    /// "rounded" (the macOS window shape) or "square".
+    public var windowCorners: String
+    /// Radius of the highlights inside the window (selection, current folder, tab, buttons). 0 = square, 4 = default.
+    public var cornerRadius: Double
 
     public init() {
         fontName = "System"
@@ -64,6 +68,8 @@ public struct Settings: Codable, Equatable, Sendable {
         newTabPath = "~"
         sidebarFontSize = 14
         volumeIcons = [:]
+        windowCorners = "rounded"
+        cornerRadius = 4
     }
 
     public init(from decoder: Decoder) throws {
@@ -84,6 +90,8 @@ public struct Settings: Codable, Equatable, Sendable {
         newTabPath = try c.decodeIfPresent(String.self, forKey: .newTabPath) ?? d.newTabPath
         sidebarFontSize = min(24, max(10, try c.decodeIfPresent(Double.self, forKey: .sidebarFontSize) ?? d.sidebarFontSize))
         volumeIcons = try c.decodeIfPresent([String: String].self, forKey: .volumeIcons) ?? d.volumeIcons
+        windowCorners = try c.decodeIfPresent(String.self, forKey: .windowCorners) == "square" ? "square" : d.windowCorners
+        cornerRadius = min(10, max(0, try c.decodeIfPresent(Double.self, forKey: .cornerRadius) ?? d.cornerRadius))
     }
 
     public static var fileText: String {
@@ -94,6 +102,7 @@ public struct Settings: Codable, Equatable, Sendable {
         // Filee settings (SPEC.md 8). Filee reloads this file when you save it.
         // fontName: "System" or any installed font, for the file lists. columns: name, size, modified, kind, added, created, ext, items.
         // jumps: ⌘J then the letter goes to the folder. defaultView: list, columns or thumbnails.
+        // windowCorners: rounded or square. cornerRadius: 0 (square) to 10, for the highlights inside the window.
 
         """ + body + "\n"
     }

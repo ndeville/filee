@@ -114,6 +114,7 @@ Switch-over (decision 42): Filee runs next to Path Finder. Path Finder is cancel
 - **Copy and move progress**: a panel above the status bar, 1 row per running copy or move: item `n of m` and its name, a red progress bar, bytes done of total, speed, time left, and a cancel button. The finished row turns green at 100% and goes after 2 s (5 s for an error).
 - **Look** (decision 14): NicAI Design. Black, white, red accent, Lato for the interface. Light and dark follow macOS until you switch: ⌃⌘L, the moon or sun button at the right of the title bar, the half-circle button at the right of the status bar, or **View > Switch Light or Dark Theme** pins the other theme; **View > Use System Theme** follows macOS again. The choice is kept in `state.json`. The bar over the active pane is red in light and white in dark.
 - **App icon**: a white folder with the NicAI edelweiss in red, on the red body (`assets/AppIcon.svg`, Nic's pick on 10th October 2026: concept 7). The red plate fills the whole canvas, like every Nic app icon since 12th October 2026. From 128 px up, the name "Filee" sits under the folder in Lato Black, the same font, size and position as the name in Notee's icon. Every Nic app icon carries his logo.
+- **Corners**: 2 keys in `settings.json`, live. `windowCorners`: `rounded` (default, the macOS window) or `square`. `cornerRadius`: the radius of the highlights inside the window (file and sidebar selection, current folder in the path, tab, type filter buttons, key caps, progress bars, thumbnails), 0 (square) to 10, default 4; messages get 3 times it. The sidebar draws its own selection, like the file list: red while it has the keyboard, grey when not. Square windows use a private AppKit method (`_cornerMask`, see `CLAUDE.md`); if a macOS update drops it, the windows stay rounded and nothing else changes. A change of either key, or a zoom, keeps the selections.
 - **Font** (decision 10): the file list font and size live in `settings.json`. Default: SF Pro 13 pt. Folders bold, aliases and symlinks italic, extensions always shown (as in Path Finder today).
 - Window frame, panes, tabs and views come back at launch.
 
@@ -315,7 +316,7 @@ Results show in the active pane as a virtual folder (decision 34). Every file ac
 
 | File               | Content                                                            | Reload |
 | -                  | -                                                                  | -      |
-| `settings.json`    | Fonts, favourites, jumps, show invisibles, vim keys, default view  | Live   |
+| `settings.json`    | Fonts, favourites, jumps, show invisibles, vim keys, default view, corners | Live   |
 | `keybindings.json` | Key overrides, VS Code format                                      | Live   |
 | `actions.json`     | Custom actions                                                     | Live   |
 | `state.json`       | Window frame, panes, tabs, views per folder, recent folders, stack | -      |
