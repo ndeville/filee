@@ -456,9 +456,9 @@ final class QAHarness {
                 && p.crumbs.fontSize == Theme.listSize
         }
         if let c = step["corners"] as? String, let w = wc.window {
-            // Square: the window answers with the 3 px mask. Rounded: with AppKit's own, which is larger.
+            // Square: the window answers with the 3 px mask. Rounded: with none, and AppKit draws its own shape.
             let mask = w.perform(WindowCorners.maskSelector)?.takeUnretainedValue() as? NSImage
-            ok = ok && Theme.settings.windowCorners == c && (c == "square" ? mask?.size == NSSize(width: 3, height: 3) : (mask?.size.width ?? 0) > 3)
+            ok = ok && Theme.settings.windowCorners == c && (c == "square" ? mask?.size == NSSize(width: 3, height: 3) : mask == nil)
         }
         if let r = step["radius"] as? Double { ok = ok && Theme.radius() == CGFloat(r) && Theme.radius(12) == CGFloat(r * 3) }
         if let s = step["sidebarSelected"] as? String { ok = ok && wc.sidebar.selectedRow?.path == canonicalFolder(s.expandingHome) }
