@@ -2,7 +2,7 @@
 
 Filee is Nic's native macOS file manager: it replaces Path Finder. `SPEC.md` is the source of truth for what it does and why. Read it before you change behaviour.
 
-The repo is public. Personal paths, scripts, notes and the signing identity live in `.private/` and `CLAUDE.local.md`, both git-ignored. Read `CLAUDE.local.md` when it exists.
+The repo is public. Personal paths, scripts and notes live in `.private/` and `CLAUDE.local.md`, both git-ignored. Read `CLAUDE.local.md` when it exists.
 
 ## Layout
 
@@ -31,7 +31,7 @@ benchmark.py      Filee vs Finder, Path Finder and ForkLift (launch, open a 10,0
 screenshots.py    README screenshots (assets/screenshots/, light and dark) and the header icon. Builds made-up projects in
                   /Users/Shared/Studio, runs the app read-only with the QA ops demoVolumes, capture and renderView (the type filter close-up, drawn at 3x), captures with
                   screencapture, deletes the folder. Run it again after a visible change.
-.private/         Git-ignored, never pushed: signing.env, forbidden.txt (what the git hooks block), Nic's action
+.private/         Git-ignored, never pushed: signing.env, Nic's action
                   scripts, the old history bundle, HANDOVER.md (fsearch research), references/.
 ```
 
@@ -56,7 +56,7 @@ cd FileeCore && swift test
 - Never point a QA run that writes at real folders. `qa.py` builds fixtures. For timing runs on real folders, set `FILEE_READONLY=1`.
 - QA runs in the background: it never activates Filee, keeps its window at 1400x900 (not resizable, so Amethyst doesn't tile it), drops real key presses, and uses a private pasteboard. Keep it that way: Nic works while QA runs.
 - Never navigate QA to `~/Downloads`, `~/Desktop` or `~/Documents`: macOS asks Nic for permission (TCC).
-- **Never write the signing identity or its team ID in a tracked file, a commit message, an issue, a pull request or any GitHub text.** `build.sh` reads it from `$FILEE_SIGN_IDENTITY` or `.private/signing.env`. The git hooks (`pre-commit`, `commit-msg`, `pre-push`, in `.git/hooks/`) refuse any commit or push that holds a string from `.private/forbidden.txt`, and refuse to run without that file. Never bypass them (`--no-verify`).
+- `build.sh` reads the signing identity from `$FILEE_SIGN_IDENTITY` or `.private/signing.env`, so a fork signs with its own certificate. The identity isn't secret (every signed app shows it, `codesign -dv`), but it stays out of the code for that reason. What is secret: the certificate's private key, the Apple ID password and the notarisation credentials. Those never go anywhere near the repo.
 - Nothing personal in tracked files: no client or employer names, no personal folders or scripts as defaults, no brand logos. Those go in `~/.filee/` or `.private/`.
 - Screenshots come from `screenshots.py` only, never from Nic's real Filee: his folders, volumes and favourites must not show. The demo shows fake volumes (`demoVolumes`) for the same reason.
 - Nic's builds sign with his Developer ID (from `.private/signing.env`), hardened runtime, bundle id `com.nicolasdeville.filee`. A stable signature keeps the Files and Folders and Full Disk Access grants across rebuilds. If `build.sh` warns "ad-hoc signature" on Nic's Mac, stop: `.private/signing.env` is missing.
