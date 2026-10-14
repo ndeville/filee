@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="564" viewBox="0 0 960 564" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect x="0.5" y="0.5" width="959" height="563" rx="14" fill="#0d1117" stroke="#30363d"/>
+<text x="32" y="52" font-size="24" font-weight="700" fill="#e6edf3">Filee, Finder, Path Finder and ForkLift</text>
+<text x="32" y="80" font-size="14" fill="#8d96a0">Folders of 10,000 files · Apple M1 Ultra · macOS 26.5 · median of 5 runs · lower is better</text>
+<text x="282" y="138" font-size="17" font-weight="700" fill="#ff7b6b">Filee</text>
+<text x="282" y="158" font-size="12.5" fill="#8d96a0">0.1.0</text>
+<text x="444" y="138" font-size="17" font-weight="700" fill="#e6edf3">Finder</text>
+<text x="444" y="158" font-size="12.5" fill="#8d96a0">26.4</text>
+<text x="605" y="138" font-size="17" font-weight="700" fill="#e6edf3">Path Finder</text>
+<text x="605" y="158" font-size="12.5" fill="#8d96a0">26.1.9</text>
+<text x="766" y="138" font-size="17" font-weight="700" fill="#e6edf3">ForkLift</text>
+<text x="766" y="158" font-size="12.5" fill="#8d96a0">4.7.6</text>
+<rect x="20" y="176" width="920" height="74" rx="8" fill="#151b23"/>
+<text x="32" y="208" font-size="16" font-weight="600" fill="#e6edf3">Launch</text>
+<text x="32" y="229" font-size="12.5" fill="#8d96a0">Start the app with a folder of 10,000 files</text>
+<text x="282" y="208" font-size="16" font-weight="700" fill="#ff7b6b">1.3 s  <tspan font-size="12.5" font-weight="600" fill="#8d96a0">2.8× faster</tspan></text>
+<rect x="282" y="220" width="128" height="8" rx="4" fill="#30363d" opacity="0.45"/>
+<rect x="282" y="220" width="29.7" height="8" rx="4" fill="#f0624f"/>
+<text x="444" y="212" font-size="14" font-style="italic" fill="#8d96a0">always running</text>
+<text x="605" y="208" font-size="16" font-weight="500" fill="#e6edf3">5.4 s</text>
+<rect x="605" y="220" width="128" height="8" rx="4" fill="#30363d" opacity="0.45"/>
+<rect x="605" y="220" width="127.5" height="8" rx="4" fill="#3d444d"/>
+<text x="766" y="208" font-size="16" font-weight="500" fill="#e6edf3">3.5 s</text>
+<rect x="766" y="220" width="128" height="8" rx="4" fill="#30363d" opacity="0.45"/>
+<rect x="766" y="220" width="83.8" height="8" rx="4" fill="#3d444d"/>
+<text x="32" y="282" font-size="16" font-weight="600" fill="#e6edf3">Open a folder</text>
+<text x="32" y="303" font-size="12.5" fill="#8d96a0">Open another 10,000-file folder</text>
+<text x="282" y="282" font-size="16" font-weight="700" fill="#ff7b6b">465 ms  <tspan font-size="12.5" font-weight="600" fill="#8d96a0">1.4× faster</tspan></text>
+<rect x="282" y="294" width="128" height="8" rx="4" fill="#30363d" opacity="0.45"/>
+<rect x="282" y="294" width="21.5" height="8" rx="4" fill="#f0624f"/>
+<text x="444" y="282" font-size="16" font-weight="500" fill="#e6edf3">634 ms</text>
+<rect x="444" y="294" width="128" height="8" rx="4" fill="#30363d" opacity="0.45"/>
+<rect x="444" y="294" width="29.3" height="8" rx="4" fill="#3d444d"/>
+<text x="605" y="282" font-size="16" font-weight="500" fill="#e6edf3">2.8 s</text>
+<rect x="605" y="294" width="128" height="8" rx="4" fill="#30363d" opacity="0.45"/>
+<rect x="605" y="294" width="127.5" height="8" rx="4" fill="#3d444d"/>
+<text x="766" y="282" font-size="16" font-weight="500" fill="#e6edf3">1.6 s</text>
+<rect x="766" y="294" width="128" height="8" rx="4" fill="#30363d" opacity="0.45"/>
+<rect x="766" y="294" width="72.3" height="8" rx="4" fill="#3d444d"/>
+<rect x="20" y="324" width="920" height="74" rx="8" fill="#151b23"/>
+<text x="32" y="356" font-size="16" font-weight="600" fill="#e6edf3">Memory</text>
+<text x="32" y="377" font-size="12.5" fill="#8d96a0">Footprint with the folder open</text>
+<text x="282" y="356" font-size="16" font-weight="700" fill="#ff7b6b">134 MB  <tspan font-size="12.5" font-weight="600" fill="#8d96a0">1.5× less</tspan></text>
+<rect x="282" y="368" width="128" height="8" rx="4" fill="#30363d" opacity="0.45"/>
+<rect x="282" y="368" width="65.7" height="8" rx="4" fill="#f0624f"/>
+<text x="444" y="356" font-size="16" font-weight="500" fill="#e6edf3">200 MB</text>
+<rect x="444" y="368" width="128" height="8" rx="4" fill="#30363d" opacity="0.45"/>
+<rect x="444" y="368" width="98.1" height="8" rx="4" fill="#3d444d"/>
+<text x="605" y="356" font-size="16" font-weight="500" fill="#e6edf3">260 MB</text>
+<rect x="605" y="368" width="128" height="8" rx="4" fill="#30363d" opacity="0.45"/>
+<rect x="605" y="368" width="127.5" height="8" rx="4" fill="#3d444d"/>
+<text x="766" y="356" font-size="16" font-weight="500" fill="#e6edf3">208 MB</text>
+<rect x="766" y="368" width="128" height="8" rx="4" fill="#30363d" opacity="0.45"/>
+<rect x="766" y="368" width="102.0" height="8" rx="4" fill="#3d444d"/>
+<text x="32" y="430" font-size="16" font-weight="600" fill="#e6edf3">App size</text>
+<text x="32" y="451" font-size="12.5" fill="#8d96a0">On disk</text>
+<text x="282" y="430" font-size="16" font-weight="700" fill="#ff7b6b">2.1 MB  <tspan font-size="12.5" font-weight="600" fill="#8d96a0">15× less</tspan></text>
+<rect x="282" y="442" width="128" height="8" rx="4" fill="#30363d" opacity="0.45"/>
+<rect x="282" y="442" width="4.0" height="8" rx="4" fill="#f0624f"/>
+<text x="444" y="430" font-size="16" font-weight="500" fill="#e6edf3">32 MB</text>
+<rect x="444" y="442" width="128" height="8" rx="4" fill="#30363d" opacity="0.45"/>
+<rect x="444" y="442" width="59.0" height="8" rx="4" fill="#3d444d"/>
+<text x="605" y="430" font-size="16" font-weight="500" fill="#e6edf3">69 MB</text>
+<rect x="605" y="442" width="128" height="8" rx="4" fill="#30363d" opacity="0.45"/>
+<rect x="605" y="442" width="127.5" height="8" rx="4" fill="#3d444d"/>
+<text x="766" y="430" font-size="16" font-weight="500" fill="#e6edf3">50 MB</text>
+<rect x="766" y="442" width="128" height="8" rx="4" fill="#30363d" opacity="0.45"/>
+<rect x="766" y="442" width="92.9" height="8" rx="4" fill="#3d444d"/>
+<text x="32" y="512" font-size="12.5" fill="#8d96a0">Time from the open command until the first files show on screen, read from screen captures by OCR. Memory as Activity Monitor shows it.</text>
+<text x="32" y="532" font-size="12.5" fill="#8d96a0">Measured on 14th October 2026 with benchmark.py (github.com/ndeville/filee). Finder is part of macOS and always running.</text>
+</svg>

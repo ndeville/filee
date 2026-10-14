@@ -25,6 +25,9 @@ FileeMac/Resources/Logo.png The title bar icon: assets/TitleBarLogo.svg (the rou
 assets/nicai/     NicAI Design kit, vendored by nicai_design.py. Never edit by hand.
 project.yml       XcodeGen project. The .xcodeproj is generated: don't edit it, don't commit it.
 qa.py             End-to-end QA on fixture folders in $TMPDIR/filee-qa.
+benchmark.py      Filee vs Finder, Path Finder and ForkLift (launch, open a 10,000-file folder, memory, app size). A Swift
+                  probe (in the script) times the first files on screen with ScreenCaptureKit and Vision OCR. Writes
+                  assets/benchmark/ (results.json, the README chart in light and dark). Quits and reopens a running Filee.
 screenshots.py    README screenshots (assets/screenshots/, light and dark) and the header icon. Builds made-up projects in
                   /Users/Shared/Studio, runs the app read-only with the QA ops demoVolumes and capture, captures with
                   screencapture, deletes the folder. Run it again after a visible change.
@@ -96,5 +99,10 @@ cd FileeCore && swift test
 
 - 10th October 2026, measured with `qa.py`: launch 140-220 ms, 10,000-file folder listed in 66-83 ms (11 ms of system calls), filter keystroke 7-8 ms, 72 MB footprint idle with 2 panes and 5 tabs. Path Finder: 305 MB footprint.
 - Real folders, read-only run: a mail export folder on Dropbox (21,361 files) lists in 250 ms (90 ms system calls on Dropbox), filter 54 ms, footprint peaks at 160-190 MB and settles at about 112 MB after leaving it. Freed malloc memory isn't returned by `malloc_zone_pressure_relief`.
+- 14th October 2026, `benchmark.py` (folders of 10,000 files, median of 5): launch to files on screen 1.3 s (Path Finder 5.4 s,
+  ForkLift 3.5 s), open a folder 465 ms (Finder 634 ms, Path Finder 2.8 s, ForkLift 1.6 s), memory 134 MB (Finder 200 MB,
+  Path Finder 260 MB, ForkLift 208 MB). An accessibility probe slowed the apps it measured (ForkLift by 1 to 2 s): measure from the screen.
+- Filee's open time: the open event arrives about 100 ms after `open`, the listing and view take about 110 ms, then about 250 ms
+  pass before the next main-queue turn (layout and display of the new rows). That last part is the place to make it faster.
 - `~/Dropbox` is a plain folder (legacy Dropbox), not File Provider: no TCC prompt.
 - Notarisation needs a `notarytool` keychain profile, not set up yet. Local builds run without it.

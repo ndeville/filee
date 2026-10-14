@@ -35,14 +35,14 @@
 
 I built Filee with Claude Code to replace Path Finder, and I use it every day. It's for people who keep their hands on the keyboard and want a file manager that opens before they finish the thought.
 
-| Measured on an M1 Ultra            | Filee          |
-| -                                  | -              |
-| Launch to a usable window          | 0.14 to 0.22 s |
-| List a folder of 10,000 files      | 66 to 83 ms    |
-| Filter 10,000 files, per keystroke | 7 to 8 ms      |
-| Memory, idle, 2 panes and 5 tabs   | 72 MB          |
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/benchmark/benchmark-dark.svg">
+  <img src="assets/benchmark/benchmark-light.svg" alt="Benchmark on folders of 10,000 files. Launch: Filee 1.3 s, Path Finder 5.4 s, ForkLift 3.5 s, Finder always running. Open a folder: Filee 465 ms, Finder 634 ms, Path Finder 2.8 s, ForkLift 1.6 s. Memory: Filee 134 MB, Finder 200 MB, Path Finder 260 MB, ForkLift 208 MB. App size: Filee 2.1 MB, Finder 32 MB, Path Finder 69 MB, ForkLift 50 MB.">
+</picture>
 
-Path Finder used 305 MB on the same Mac.
+`benchmark.py` measured these numbers. It opens each app on 2 folders of 10,000 files, captures the screen and reads the frames with OCR to find the moment the first files show. It never touches the apps it measures. To measure on your Mac, run `python3 benchmark.py`.
+
+Inside Filee, listing 10,000 files takes 66 to 83 ms, and the filter takes 7 to 8 ms per keystroke.
 
 Filee reads folders with `getattrlistbulk`, copies with `copyfile` (an instant clone on APFS) and draws with AppKit. It has no third-party code, no network access and no telemetry.
 
@@ -252,6 +252,8 @@ python3 qa.py                 # end-to-end QA on fixture folders, about 1 minute
 ```
 
 `qa.py` drives the real app in the background on folders it creates in `$TMPDIR/filee-qa`. It never touches your files and never takes the keyboard, so you can keep working while it runs.
+
+To compare Filee with Finder, Path Finder and ForkLift again, run `python3 benchmark.py` (about 5 minutes, the apps open and quit while it runs). It writes the chart in `assets/benchmark/`.
 
 To make the screenshots again, run `python3 screenshots.py`. It builds a demo folder of made-up projects in `/Users/Shared/Studio`, captures the app in light and dark, and deletes the folder. It needs Pillow and pngquant.
 

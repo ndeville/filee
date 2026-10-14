@@ -1,0 +1,157 @@
+{
+  "date": "2026-10-14",
+  "chip": "Apple M1 Ultra",
+  "macos": "26.5",
+  "files": 10000,
+  "runs": 5,
+  "apps": [
+    {
+      "name": "Filee",
+      "path": "/Applications/Filee.app",
+      "bundle": "com.nicolasdeville.filee",
+      "version": "0.1.0",
+      "size_mb": 2.1,
+      "launch_ms": 1254,
+      "open_ms": 465,
+      "memory_mb": 134.0,
+      "rounds": [
+        {
+          "launch_ms": 1300.5,
+          "open_ms": 441.3,
+          "memory_mb": 133.0
+        },
+        {
+          "launch_ms": 1334.2,
+          "open_ms": 465,
+          "memory_mb": 133.0
+        },
+        {
+          "launch_ms": 1134.4,
+          "open_ms": 495.8,
+          "memory_mb": 134.0
+        },
+        {
+          "launch_ms": 1254,
+          "open_ms": 489.2,
+          "memory_mb": 138.0
+        },
+        {
+          "launch_ms": 1138.1,
+          "open_ms": 430.8,
+          "memory_mb": 135.0
+        }
+      ]
+    },
+    {
+      "name": "Finder",
+      "path": "/System/Library/CoreServices/Finder.app",
+      "bundle": "com.apple.finder",
+      "version": "26.4",
+      "size_mb": 32.0,
+      "launch_ms": null,
+      "open_ms": 634.5,
+      "memory_mb": 200.0,
+      "rounds": [
+        {
+          "launch_ms": null,
+          "open_ms": 663.6,
+          "memory_mb": 200.0
+        },
+        {
+          "launch_ms": null,
+          "open_ms": 581.9,
+          "memory_mb": 199.0
+        },
+        {
+          "launch_ms": null,
+          "open_ms": 635.8,
+          "memory_mb": 199.0
+        },
+        {
+          "launch_ms": null,
+          "open_ms": 634.5,
+          "memory_mb": 200.0
+        },
+        {
+          "launch_ms": null,
+          "open_ms": 552.1,
+          "memory_mb": 200.0
+        }
+      ]
+    },
+    {
+      "name": "Path Finder",
+      "path": "/Applications/Setapp/Path Finder.app",
+      "bundle": "com.cocoatech.PathFinder-setapp",
+      "version": "26.1.9",
+      "size_mb": 69.2,
+      "launch_ms": 5388.8,
+      "open_ms": 2758.8,
+      "memory_mb": 260.0,
+      "rounds": [
+        {
+          "launch_ms": 5411.9,
+          "open_ms": 2781.8,
+          "memory_mb": 261.0
+        },
+        {
+          "launch_ms": 5707.2,
+          "open_ms": 2711.5,
+          "memory_mb": 258.0
+        },
+        {
+          "launch_ms": 5388.8,
+          "open_ms": 2758.8,
+          "memory_mb": 260.0
+        },
+        {
+          "launch_ms": 5229.7,
+          "open_ms": 2724.8,
+          "memory_mb": 259.0
+        },
+        {
+          "launch_ms": 5336.3,
+          "open_ms": 3041,
+          "memory_mb": 263.0
+        }
+      ]
+    },
+    {
+      "name": "ForkLift",
+      "path": "/Applications/Setapp/ForkLift.app",
+      "bundle": "com.binarynights.forklift-setapp",
+      "version": "4.7.6",
+      "size_mb": 50.4,
+      "launch_ms": 3542.6,
+      "open_ms": 1564.8,
+      "memory_mb": 208.0,
+      "rounds": [
+        {
+          "launch_ms": 3742.7,
+          "open_ms": 1392.4,
+          "memory_mb": 208.0
+        },
+        {
+          "launch_ms": 3496.2,
+          "open_ms": 1564.8,
+          "memory_mb": 207.0
+        },
+        {
+          "launch_ms": 3483.4,
+          "open_ms": 1375.7,
+          "memory_mb": 209.0
+        },
+        {
+          "launch_ms": 3542.6,
+          "open_ms": 1646.5,
+          "memory_mb": 209.0
+        },
+        {
+          "launch_ms": 4347.1,
+          "open_ms": 1591.9,
+          "memory_mb": 196.0
+        }
+      ]
+    }
+  ]
+}
