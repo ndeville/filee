@@ -237,6 +237,24 @@ final class QAHarness {
             record(step)
             done()
 
+        case "renderView":
+            // README close-up: the type filter and the item count under it, drawn at "scale" (3) times, so it stays sharp
+            // on a 1x screen.
+            let p = pane(step)
+            let scale = step["scale"] as? Double ?? 3
+            let u = p.typeBar.frame.union(p.countLabel.frame)
+            let r = NSRect(x: u.minX - 12, y: p.typeBar.frame.minY + 1, width: u.width + 18, height: p.countLabel.frame.maxY + 3 - (p.typeBar.frame.minY + 1))
+                .intersection(p.container.bounds)
+            if let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(r.width * scale), pixelsHigh: Int(r.height * scale),
+                                          bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,
+                                          bytesPerRow: 0, bitsPerPixel: 0) {
+                rep.size = r.size
+                p.container.cacheDisplay(in: r, to: rep)
+                try? rep.representation(using: .png, properties: [:])?.write(to: out.appendingPathComponent("\(step["name"] as? String ?? "view").png"))
+            }
+            record(step)
+            done()
+
         case "capture":
             // README screenshots (screenshots.py): the window ids and frames go to <name>.capture.json, screenshots.py
             // captures them with screencapture and writes <name>.done. Then the script goes on.

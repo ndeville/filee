@@ -289,6 +289,7 @@ def script() -> list:
         {"op": "click", "pane": 0, "target": "type:pdf"},
         {"op": "wait", "ms": 2800},
         {"op": "capture", "name": "type-filter"},
+        {"op": "renderView", "pane": 0, "name": "type-filter-zoom", "scale": 3},
         {"op": "click", "pane": 0, "target": "type:pdf"},
         {"op": "command", "id": "previousTab"},
 
@@ -346,6 +347,16 @@ def compose(info: dict, work: Path, name: str) -> Image.Image:
     return Image.open(path).convert("RGBA")
 
 
+def close_up(src: Path, dest: Path):
+    """A view drawn at 3x by the app (renderView): rounded corners and a shadow, as a card."""
+    img = Image.open(src).convert("RGBA")
+    mask = Image.new("L", img.size, 0)
+    ImageDraw.Draw(mask).rounded_rectangle([0, 0, img.width - 1, img.height - 1], 36, fill=255)
+    img.putalpha(mask)
+    shadowed(img, 30, 14, 90, 70).save(dest)
+    subprocess.run(["pngquant", "--force", "--skip-if-larger", "--quality", "80-98", "--ext", ".png", str(dest)], check=False)
+
+
 def finish_image(img: Image.Image, dest: Path):
     """The window with its shadow, at most 1800 px wide, compressed."""
     framed = shadowed(img, 28, 16, 110, 60)
@@ -395,6 +406,10 @@ def run_theme(theme: str, work: Path):
             (out / f"{name}.done").write_text("", encoding="utf-8")
             print(f"📸 {name}-{theme}.png")
         time.sleep(0.1)
+    for view in out.glob("*-zoom.png"):
+        close_up(view, OUT / f"{view.stem}-{theme}.png")
+        handled.add(view.stem)
+        print(f"📸 {view.stem}-{theme}.png")
     if proc.poll() is None:
         proc.terminate()
         print(f"❌ {theme}: the app didn't finish", file=sys.stderr)

@@ -27,9 +27,9 @@ project.yml       XcodeGen project. The .xcodeproj is generated: don't edit it, 
 qa.py             End-to-end QA on fixture folders in $TMPDIR/filee-qa.
 benchmark.py      Filee vs Finder, Path Finder and ForkLift (launch, open a 10,000-file folder, memory, app size). A Swift
                   probe (in the script) times the first files on screen with ScreenCaptureKit and Vision OCR. Writes
-                  assets/benchmark/ (results.json, the README chart in light and dark). Quits and reopens a running Filee.
+                  assets/benchmark/ (results.json, the apps' icons, the README chart in light and dark). Quits and reopens a running Filee.
 screenshots.py    README screenshots (assets/screenshots/, light and dark) and the header icon. Builds made-up projects in
-                  /Users/Shared/Studio, runs the app read-only with the QA ops demoVolumes and capture, captures with
+                  /Users/Shared/Studio, runs the app read-only with the QA ops demoVolumes, capture and renderView (the type filter close-up, drawn at 3x), captures with
                   screencapture, deletes the folder. Run it again after a visible change.
 .private/         Git-ignored, never pushed: signing.env, forbidden.txt (what the git hooks block), Nic's action
                   scripts, the old history bundle, HANDOVER.md (fsearch research), references/.

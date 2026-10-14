@@ -28,6 +28,7 @@ Terminal (or the app that runs this script) needs Screen Recording and Accessibi
 """
 
 import argparse
+import base64
 import json
 import plistlib
 import re
@@ -56,6 +57,7 @@ import Vision
 //   read by OCR. The app is never touched: frames come from the window server (ScreenCaptureKit). Prints JSON.
 // probe close <bundleId> <window title>   presses the close button of that window (accessibility)
 // probe closeall <bundleId>               presses the close button of every window of the app
+// probe icon <app path> <out.png> <px>    writes the app's icon
 
 func now() -> Double { Double(DispatchTime.now().uptimeNanoseconds) / 1e6 }
 
@@ -167,6 +169,19 @@ func closeWindows(_ bundleId: String, title: String?) {
 struct Main {
     static func main() async throws {
         let args = CommandLine.arguments
+        if args.count >= 5 && args[1] == "icon" {
+            // probe icon <app path> <out.png> <px>: the app's icon as the Dock shows it, for the chart.
+            let px = Int(args[4])!
+            let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: px, pixelsHigh: px, bitsPerSample: 8, samplesPerPixel: 4,
+                                       hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
+            rep.size = NSSize(width: px, height: px)
+            NSGraphicsContext.saveGraphicsState()
+            NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+            NSWorkspace.shared.icon(forFile: args[2]).draw(in: NSRect(x: 0, y: 0, width: px, height: px))
+            NSGraphicsContext.restoreGraphicsState()
+            try rep.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: args[3]))
+            exit(0)
+        }
         if args.count >= 3 && args[1] == "closeall" { closeWindows(args[2], title: nil); exit(0) }
         if args.count >= 4 && args[1] == "close" { closeWindows(args[2], title: args[3]); exit(0) }
         guard args.count >= 7, args[1] == "run", let sep = args.firstIndex(of: "--") else {
@@ -433,8 +448,13 @@ def svg(results: dict, theme: str) -> str:
     for i, app in enumerate(apps):
         x = pad + label_w + i * col_w
         colour = t["accent_text"] if app["bundle"] == FILEE_ID else t["text"]
-        o.append(f'<text x="{x:.0f}" y="{y + 26}" font-size="17" font-weight="700" fill="{colour}">{esc(app["name"])}</text>')
-        o.append(f'<text x="{x:.0f}" y="{y + 46}" font-size="12.5" fill="{t["muted"]}">{esc(app["version"])}</text>')
+        icon = icon_data(app["name"])
+        tx = x
+        if icon:
+            o.append(f'<image x="{x - 4:.0f}" y="{y + 2}" width="46" height="46" href="{icon}"/>')
+            tx = x + 48
+        o.append(f'<text x="{tx:.0f}" y="{y + 23}" font-size="17" font-weight="700" fill="{colour}">{esc(app["name"])}</text>')
+        o.append(f'<text x="{tx:.0f}" y="{y + 43}" font-size="12.5" fill="{t["muted"]}">{esc(app["version"])}</text>')
     y += head_h
     for r, (title, sub, key, fmt) in enumerate(rows):
         if r % 2 == 0:
@@ -474,7 +494,51 @@ def svg(results: dict, theme: str) -> str:
     return "\n".join(o) + "\n"
 
 
+def slug(name: str) -> str:
+    return name.lower().replace(" ", "-")
+
+
+def app_icons(results: dict):
+    """Each app's icon (128 px) in assets/benchmark/icons/, from the installed app, for the chart's header."""
+    folder = OUT / "icons"
+    folder.mkdir(parents=True, exist_ok=True)
+    probe = None
+    for app in results["apps"]:
+        dest = folder / f"{slug(app['name'])}.png"
+        if not Path(app["path"]).exists():
+            continue
+        if app["bundle"] == FILEE_ID and shutil.which("rsvg-convert"):
+            filee_icon(dest)
+        else:
+            probe = probe or build_probe()
+            subprocess.run([str(probe), "icon", app["path"], str(dest), "128"], check=True, capture_output=True)
+        subprocess.run(["pngquant", "--force", "--skip-if-larger", "--quality", "80-98", "--ext", ".png", str(dest)], capture_output=True)
+
+
+def filee_icon(dest: Path):
+    """Filee's icon without its name: at 128 px macOS draws the version with "Filee" under the folder, too small to read
+    in the chart. The rounded square and the margin follow Apple's icon grid (824 of 1024 px)."""
+    from PIL import Image, ImageDraw
+    body = 104
+    with tempfile.TemporaryDirectory() as tmp:
+        raw = Path(tmp) / "icon.png"
+        subprocess.run(["rsvg-convert", "-w", str(body), "-h", str(body), str(ROOT / "assets/AppIcon-small.svg"), "-o", str(raw)], check=True)
+        art = Image.open(raw).convert("RGBA")
+    mask = Image.new("L", (body, body), 0)
+    ImageDraw.Draw(mask).rounded_rectangle([0, 0, body - 1, body - 1], round(body * 0.225), fill=255)
+    art.putalpha(mask)
+    icon = Image.new("RGBA", (128, 128), (0, 0, 0, 0))
+    icon.alpha_composite(art, ((128 - body) // 2, (128 - body) // 2))
+    icon.save(dest)
+
+
+def icon_data(name: str) -> str | None:
+    path = OUT / "icons" / f"{slug(name)}.png"
+    return "data:image/png;base64," + base64.b64encode(path.read_bytes()).decode() if path.exists() else None
+
+
 def write_charts(results: dict):
+    app_icons(results)
     for theme in THEMES:
         (OUT / f"benchmark-{theme}.svg").write_text(svg(results, theme), encoding="utf-8")
     print(f"✅ charts: {(OUT / 'benchmark-light.svg').relative_to(ROOT)}, benchmark-dark.svg")

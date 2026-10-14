@@ -72,6 +72,13 @@ This is personal software. It does what I need on my Mac. I don't offer support,
 - **File-type filter on each tab:** PDF, PowerPoint, Word, Excel, Markdown, video or images. Each button shows the icon of the app that opens that type on your Mac. The filter stays with the tab from folder to folder.
 - **Jumps:** ⌘J and 1 letter goes to a folder you set in `settings.json`.
 
+<p align="center">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/type-filter-zoom-dark.png">
+  <img src="assets/screenshots/type-filter-zoom-light.png" width="460" alt="Close-up of the file-type filter: the All button, then 1 button per file type with the icon of its app (Preview for PDF, PowerPoint, Word, Excel, a Markdown editor, VLC for video, Photos for images). PDF is selected, and the count under the buttons reads PDF, 1 selected, 6 items.">
+</picture>
+</p>
+
 ### Work with files
 
 - **Copy, cut and paste** files from the **Edit** menu, or copy and move to the other pane with F5 and F6.
