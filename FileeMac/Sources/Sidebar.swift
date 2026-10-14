@@ -114,6 +114,8 @@ final class SidebarController: NSObject, NSOutlineViewDataSource, NSOutlineViewD
     }
 
     private var volumeDetails: [String: VolumeInfo] = [:]
+    /// README screenshots (screenshots.py): these volumes instead of the mounted ones, so no real volume shows.
+    var demoVolumes: [(path: String, info: VolumeInfo)]? { didSet { reload() } }
     private var detailsLoading = false
 
     private func loadVolumeDetails(_ urls: [URL]) {
@@ -149,10 +151,14 @@ final class SidebarController: NSObject, NSOutlineViewDataSource, NSOutlineViewD
         sections[0].rows = FavouriteTree.build(favourites, home: NSHomeDirectory()).map { row(for: $0, level: 0) }
         // Volume names and free space are slow on network shares (100+ ms): the list shows at once,
         // the details arrive from a background queue.
-        let urls = FileManager.default.mountedVolumeURLs(includingResourceValuesForKeys: nil, options: [.skipHiddenVolumes]) ?? []
-        let volumes = urls.map { url -> Row in
-            let known = volumeDetails[url.path]
-            return Row(.volume, known?.name ?? (url.path == "/" ? "Macintosh HD" : url.lastPathComponent), url.path, detail: known?.free ?? "")
+        let urls = demoVolumes == nil ? FileManager.default.mountedVolumeURLs(includingResourceValuesForKeys: nil, options: [.skipHiddenVolumes]) ?? [] : []
+        if let demo = demoVolumes {
+            for v in demo { volumeDetails[v.path] = v.info }
+        }
+        let paths = demoVolumes?.map { $0.path } ?? urls.map(\.path)
+        let volumes = paths.map { path -> Row in
+            let known = volumeDetails[path]
+            return Row(.volume, known?.name ?? (path == "/" ? "Macintosh HD" : (path as NSString).lastPathComponent), path, detail: known?.free ?? "")
         }
         let colours = Icons.volumeColours(volumes.filter { $0.path != "/" }.map(\.name))
         for v in volumes {
@@ -161,7 +167,7 @@ final class SidebarController: NSObject, NSOutlineViewDataSource, NSOutlineViewD
                                               color: colours[v.name] ?? Theme.folderIcon)
         }
         sections[1].rows = volumes
-        loadVolumeDetails(urls)
+        if demoVolumes == nil { loadVolumeDetails(urls) }
         sections[2].rows = app.state.recent.prefix(10).map { Row(.recent, ($0 as NSString).lastPathComponent, $0.expandingHome) }
         sections[3].rows = app.state.dropStack.map { Row(.stack, ($0 as NSString).lastPathComponent, $0) }
         // A favourite on a volume shows the volume's icon.

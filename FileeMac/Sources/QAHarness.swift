@@ -27,6 +27,12 @@ final class QAHarness {
         if let w = AppDelegate.shared.activeWindow?.window {
             w.styleMask.remove(.resizable)
             w.setFrame(NSRect(x: 80, y: 80, width: 1400, height: 900), display: true)
+            // README screenshots: an active window has coloured traffic lights.
+            if env["FILEE_QA_ACTIVATE"] == "1" {
+                NSApp.activate(ignoringOtherApps: true)
+                w.makeKeyAndOrderFront(nil)
+                w.standardWindowButton(.zoomButton)?.isEnabled = true
+            }
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { instance?.next() }
     }
@@ -183,15 +189,85 @@ final class QAHarness {
 
         case "transferDemo":
             // A copy halfway through, for the screenshot: real copies on APFS are clones and finish at once.
+            // "keep": the row stays, for a capture.
             let key = NSObject()
-            wc.transfers.update(key, OperationProgress(title: "Copying", currentName: "260320-world-summit-keynote.mov", itemsDone: 1,
+            wc.transfers.update(key, OperationProgress(title: "Copying", currentName: step["file"] as? String ?? "260320-world-summit-keynote.mov", itemsDone: 1,
                                                        itemsTotal: 3, bytesDone: 1_288_490_188, bytesTotal: 4_294_967_296)) {}
+            if step["keep"] as? Bool == true {
+                record(step)
+                done()
+                return
+            }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 self.screenshot(step["name"] as? String ?? "transfer")
                 self.wc.transfers.finish(key, text: "✅ Copied 3 items to ~/Videos", error: false)
                 self.record(step, ok: self.wc.transfers.rows.count >= 1)
                 done()
             }
+
+        case "paletteOpen":
+            wc.showPalette()
+            wc.palette?.qaType(step["text"] as? String ?? "")
+            record(step, ok: wc.palette?.qaPanel.isVisible ?? false)
+            done()
+
+        case "paletteClose":
+            wc.palette?.close()
+            record(step)
+            done()
+
+        case "renameFill":
+            record(step, ok: RenameSheet.qaFill(base: step["base"] as? String ?? ""))
+            done()
+
+        case "renameCancel":
+            RenameSheet.qaCancel()
+            record(step)
+            done()
+
+        case "demoVolumes":
+            // [{"name", "free", "local", "internal"}]: the sidebar shows these instead of the mounted volumes.
+            let list = step["volumes"] as? [[String: Any]] ?? []
+            wc.sidebar.demoVolumes = list.map { v in
+                let name = v["name"] as? String ?? ""
+                return (path: v["path"] as? String ?? "/Volumes/" + name,
+                        info: SidebarController.VolumeInfo(name: name, free: v["free"] as? String ?? "", isLocal: v["local"] as? Bool ?? true,
+                                                 isInternal: v["internal"] as? Bool ?? false))
+            }
+            record(step)
+            done()
+
+        case "capture":
+            // README screenshots (screenshots.py): the window ids and frames go to <name>.capture.json, screenshots.py
+            // captures them with screencapture and writes <name>.done. Then the script goes on.
+            let name = step["name"] as? String ?? "capture-\(index)"
+            var seen = Set<Int>()
+            let windows = ([wc.window] + (wc.window?.childWindows ?? []) + [wc.window?.attachedSheet])
+                .compactMap { $0 }.filter { $0.isVisible && seen.insert($0.windowNumber).inserted }
+            let list = windows.map { w -> [String: Any] in
+                ["id": w.windowNumber, "x": w.frame.minX, "y": w.frame.minY, "w": w.frame.width, "h": w.frame.height,
+                 "scale": w.backingScaleFactor]
+            }
+            let doneFile = out.appendingPathComponent("\(name).done")
+            try? FileManager.default.removeItem(at: doneFile)
+            // Active again, in case another app took the focus: the traffic lights only show their colours then.
+            if ProcessInfo.processInfo.environment["FILEE_QA_ACTIVATE"] == "1" && !NSApp.isActive {
+                NSApp.activate(ignoringOtherApps: true)
+                Thread.sleep(forTimeInterval: 0.3)
+            }
+            if let data = try? JSONSerialization.data(withJSONObject: ["windows": list]) {
+                try? data.write(to: out.appendingPathComponent("\(name).capture.json"))
+            }
+            let start = Date()
+            func poll() {
+                if FileManager.default.fileExists(atPath: doneFile.path) || Date().timeIntervalSince(start) > 60 {
+                    record(step, ok: FileManager.default.fileExists(atPath: doneFile.path))
+                    done()
+                } else {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: poll)
+                }
+            }
+            poll()
 
         case "foldFavourite":
             // The chevron of 1 favourite, as a click on it.

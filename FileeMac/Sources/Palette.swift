@@ -165,6 +165,13 @@ final class PaletteController: NSObject, NSTextFieldDelegate, NSTableViewDataSou
 
     func controlTextDidChange(_ obj: Notification) { filter() }
 
+    /// For QA: the panel's window, and a typed query without key presses.
+    var qaPanel: NSWindow { panel }
+    func qaType(_ text: String) {
+        field.stringValue = text
+        filter()
+    }
+
     func control(_ control: NSControl, textView: NSTextView, doCommandBy selector: Selector) -> Bool {
         switch selector {
         case #selector(NSResponder.moveDown(_:)):
@@ -268,7 +275,7 @@ private final class PaletteCell: NSTableCellView {
         icon.frame = NSRect(x: pad, y: ((h - 16) / 2).rounded(), width: 16, height: 16)
         var dw: CGFloat = 0
         if !detail.stringValue.isEmpty {
-            dw = min(textWidth(detail.stringValue, font: detail.font!) + (isKey ? 14 : 2), (bounds.width * 0.45).rounded())
+            dw = min(textWidth(detail.stringValue, font: detail.font!) + (isKey ? 14 : 8), (bounds.width * 0.45).rounded())
         }
         let dh = detail.intrinsicContentSize.height
         detail.frame = NSRect(x: bounds.width - pad - dw, y: ((h - dh) / 2).rounded(), width: dw, height: dh)

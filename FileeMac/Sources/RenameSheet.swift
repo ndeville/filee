@@ -172,6 +172,18 @@ final class RenameSheet: NSObject, NSTableViewDataSource, NSTableViewDelegate, N
         browser.selectInPanes(results)
     }
 
+    /// For QA: fill the sheet without clicks (README screenshots), and close it.
+    static func qaFill(base: String) -> Bool {
+        guard let s = current else { return false }
+        s.modePopup.selectItem(at: 0)
+        s.modeChanged()
+        s.field1.stringValue = base
+        s.update()
+        return true
+    }
+
+    static func qaCancel() { current?.cancel() }
+
     /// For QA: fill the sheet and apply without clicks.
     static func qaApply(base: String) -> Bool {
         guard let s = current else { return false }

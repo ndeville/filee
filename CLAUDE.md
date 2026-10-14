@@ -25,6 +25,9 @@ FileeMac/Resources/Logo.png The title bar icon: assets/TitleBarLogo.svg (the rou
 assets/nicai/     NicAI Design kit, vendored by nicai_design.py. Never edit by hand.
 project.yml       XcodeGen project. The .xcodeproj is generated: don't edit it, don't commit it.
 qa.py             End-to-end QA on fixture folders in $TMPDIR/filee-qa.
+screenshots.py    README screenshots (assets/screenshots/, light and dark) and the header icon. Builds made-up projects in
+                  /Users/Shared/Studio, runs the app read-only with the QA ops demoVolumes and capture, captures with
+                  screencapture, deletes the folder. Run it again after a visible change.
 .private/         Git-ignored, never pushed: signing.env, forbidden.txt (what the git hooks block), Nic's action
                   scripts, the old history bundle, HANDOVER.md (fsearch research), references/.
 ```
@@ -39,6 +42,7 @@ inside it (`Icons.folderIconFiles`); a volume's logo comes from `volumeIcons` in
 ./build.sh --install      # also copy it to /Applications/Filee.app (quits a running Filee first)
 ./build.sh --test         # run the FileeCore unit tests first
 python3 qa.py             # all QA suites (about 1 min); python3 qa.py --only ops
+python3 screenshots.py    # README screenshots, light and dark (about 2 min, the window comes to the front)
 cd FileeCore && swift test
 ```
 
@@ -51,6 +55,7 @@ cd FileeCore && swift test
 - Never navigate QA to `~/Downloads`, `~/Desktop` or `~/Documents`: macOS asks Nic for permission (TCC).
 - **Never write the signing identity or its team ID in a tracked file, a commit message, an issue, a pull request or any GitHub text.** `build.sh` reads it from `$FILEE_SIGN_IDENTITY` or `.private/signing.env`. The git hooks (`pre-commit`, `commit-msg`, `pre-push`, in `.git/hooks/`) refuse any commit or push that holds a string from `.private/forbidden.txt`, and refuse to run without that file. Never bypass them (`--no-verify`).
 - Nothing personal in tracked files: no client or employer names, no personal folders or scripts as defaults, no brand logos. Those go in `~/.filee/` or `.private/`.
+- Screenshots come from `screenshots.py` only, never from Nic's real Filee: his folders, volumes and favourites must not show. The demo shows fake volumes (`demoVolumes`) for the same reason.
 - Nic's builds sign with his Developer ID (from `.private/signing.env`), hardened runtime, bundle id `com.nicolasdeville.filee`. A stable signature keeps the Files and Folders and Full Disk Access grants across rebuilds. If `build.sh` warns "ad-hoc signature" on Nic's Mac, stop: `.private/signing.env` is missing.
 - App icons always carry Nic's logo (the NicAI edelweiss). Icons follow the NicAI app icon layout (full canvas, name under the art: see the nicai-design skill). Edit `assets/AppIcon-art.svg` and regenerate; the options and their generator are in `output/261010-app-icon-options/`.
 - ⌘H goes to the home folder, not Hide Filee (Nic's choice, 13th October 2026): the Hide menu item has no key.
