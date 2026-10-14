@@ -185,7 +185,8 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
 
     func layout() {
         let b = container.bounds
-        let tabH = Theme.tabHeight, pathH: CGFloat = 26, accentH: CGFloat = 3
+        // The path row grows with the file list's font (⌘+), as the tabs do.
+        let tabH = Theme.tabHeight, pathH = max(26, (Theme.listSize * 1.85).rounded()), accentH: CGFloat = 3
         accentBar.frame = NSRect(x: 0, y: 0, width: b.width, height: accentH)
         // The type filter sits right of the tabs; a narrow pane keeps the room for its tabs.
         typeBar.isHidden = b.width < 420
@@ -193,9 +194,10 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
         typeBar.frame = NSRect(x: b.width - typeW, y: accentH, width: typeBar.width, height: tabH)
         tabStrip.frame = NSRect(x: 0, y: accentH, width: b.width - typeW, height: tabH)
         let countW = min(160, textWidth(countLabel.stringValue, font: countLabel.font!) + 12)
-        pathField.frame = NSRect(x: 10, y: accentH + tabH + 3, width: b.width - countW - 20, height: pathH - 6)
+        let fieldH = (Theme.listSize * 1.35).rounded()
+        pathField.frame = NSRect(x: 10, y: accentH + tabH + ((pathH - fieldH) / 2).rounded(), width: b.width - countW - 20, height: fieldH)
         crumbs.frame = NSRect(x: 5, y: accentH + tabH + 2, width: b.width - countW - 15, height: pathH - 4)
-        countLabel.frame = NSRect(x: b.width - countW - 6, y: accentH + tabH + 5, width: countW, height: pathH - 8)
+        countLabel.frame = NSRect(x: b.width - countW - 6, y: accentH + tabH + ((pathH - 16) / 2).rounded(), width: countW, height: 16)
         countLabel.alignment = .right
         let top = accentH + tabH + pathH
         let filterH: CGFloat = filterBar.isHidden ? 0 : 34
@@ -497,7 +499,8 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
         for v in views.values { v.styleChanged() }
         fileView.modelChanged(reloaded: false)
         updatePathLabel()
-        // The tab names and the type filter follow the file list's size.
+        crumbs.styleChanged()
+        // The tab names, the path and the type filter follow the file list's size.
         tabStrip.active = tabStrip.active
         typeBar.styleChanged()
         layout()
@@ -593,7 +596,7 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
         pathField.isSelectable = true
         pathField.isHidden = false
         crumbs.isHidden = true
-        pathField.font = Theme.ui(13)
+        pathField.font = Theme.listFont()
         pathField.textColor = Theme.fg
         pathField.stringValue = path.abbreviatingHome + (path == "/" ? "" : "/")
         container.window?.makeFirstResponder(pathField)

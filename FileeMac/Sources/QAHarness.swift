@@ -425,6 +425,7 @@ final class QAHarness {
             p.container.layoutSubtreeIfNeeded()
             ok = ok && Theme.zoomSteps == z && p.tabStrip.frame.height == Theme.tabHeight
                 && p.tabStrip.titleFontSize == Theme.listSize && p.typeBar.buttonHeight == Theme.tabHeight - 4
+                && p.crumbs.fontSize == Theme.listSize
         }
         if let t = step["types"] as? String { ok = ok && p.folderModel.types.rawValue == t && p.typeBar.selected.rawValue == t }
         if let r = step["renaming"] as? Bool { ok = ok && ((p.fileView as? ListView)?.isRenaming ?? false) == r }

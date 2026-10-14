@@ -119,7 +119,7 @@ def suites(fx: dict) -> dict:
             {"op": "key", "keys": "cmd+b"},
             {"op": "expect", "label": "cmd+b shows it again", "sidebar": True},
             {"op": "key", "keys": "cmd+="},
-            {"op": "expect", "label": "cmd+= enlarges the files, the tab names and the type icons", "zoom": 1},
+            {"op": "expect", "label": "cmd+= enlarges the files, the tab names, the path and the type icons", "zoom": 1},
             {"op": "screenshot", "name": "00-zoom"},
             {"op": "key", "keys": "cmd+0"},
             {"op": "expect", "label": "cmd+0 resets the size and leaves the sidebar", "zoom": 0, "sidebar": True},

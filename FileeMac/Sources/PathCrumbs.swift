@@ -1,7 +1,8 @@
 import AppKit
 import FileeCore
 
-/// The folder path above a pane's files, from the home folder (or the volume) down. A click on a folder goes there,
+/// The folder path above a pane's files, from the home folder (or the volume) down, in the file list's font and size.
+/// The current folder is highlighted like a selected row, the separators are red. A click on a folder goes there,
 /// a drop on it copies or moves into it (Finder's rules), a click on the current folder or the free space opens the path
 /// for typing. 1 view that draws its own text: no subviews, no disk access, a new layout only when the path or the
 /// width changes.
@@ -29,11 +30,11 @@ final class PathCrumbs: NSView {
     private var dropIndex: Int?
     private var dragged: [URL] = []
 
-    private let font = Theme.ui(13)
-    private let currentFont = Theme.ui(13, weight: .bold)
-    private let pad: CGFloat = 5
-    private let separatorWidth: CGFloat = 14
-    private let iconWidth: CGFloat = 15
+    private var font = Theme.listFont()
+    private var currentFont = Theme.listFont(bold: true)
+    private var pad: CGFloat { (font.pointSize * 0.5).rounded() }
+    private var separatorWidth: CGFloat { (font.pointSize * 1.15).rounded() }
+    private var iconWidth: CGFloat { (font.pointSize * 1.15).rounded() }
     private var icons: [String: NSImage] = [:]
 
     override var isFlipped: Bool { true }
@@ -77,6 +78,16 @@ final class PathCrumbs: NSView {
             out.append(Crumb(title: String(name), path: base))
         }
         return out
+    }
+
+    /// Zoom (⌘+ ⌘- ⌘0) or a new font in settings.json.
+    func styleChanged() {
+        font = Theme.listFont()
+        currentFont = Theme.listFont(bold: true)
+        icons = [:]
+        arrangedWidth = -1
+        needsLayout = true
+        needsDisplay = true
     }
 
     // MARK: Layout and drawing
@@ -126,7 +137,7 @@ final class PathCrumbs: NSView {
 
     private func icon(_ name: String) -> NSImage? {
         if let i = icons[name] { return i }
-        let config = NSImage.SymbolConfiguration(pointSize: 11, weight: .medium).applying(.init(paletteColors: [Theme.muted]))
+        let config = NSImage.SymbolConfiguration(pointSize: (font.pointSize * 0.85).rounded(), weight: .medium).applying(.init(paletteColors: [Theme.muted]))
         let i = NSImage(systemSymbolName: name, accessibilityDescription: nil)?.withSymbolConfiguration(config)
         icons[name] = i
         return i
@@ -139,7 +150,11 @@ final class PathCrumbs: NSView {
         for (i, c) in shown.enumerated() {
             let current = i == shown.count - 1
             let box = c.rect.insetBy(dx: 0, dy: 1)
-            if i == dropIndex {
+            if current, i != dropIndex {
+                // The current folder, as a selected row: red in the active pane, grey in the other.
+                (active ? Theme.accentFill : Theme.selectionInactive).setFill()
+                NSBezierPath(roundedRect: box, xRadius: 4, yRadius: 4).fill()
+            } else if i == dropIndex {
                 Theme.accentSoft.setFill()
                 Theme.accent.setStroke()
                 let p = NSBezierPath(roundedRect: box.insetBy(dx: 0.5, dy: 0.5), xRadius: 4, yRadius: 4)
@@ -156,12 +171,12 @@ final class PathCrumbs: NSView {
                                     width: size.width, height: size.height))
                 x += iconWidth + 3
             }
-            let color = current ? (active ? Theme.fg : Theme.muted) : (i == hover || i == dropIndex ? Theme.fg : Theme.muted)
+            let color = current && i != dropIndex ? (active ? NSColor.white : Theme.fg) : (i == hover || i == dropIndex ? Theme.fg : Theme.muted)
             let text = NSAttributedString(string: c.title, attributes: [.font: current ? currentFont : font, .foregroundColor: color, .paragraphStyle: para])
             text.draw(with: NSRect(x: x, y: ((bounds.height - lineH) / 2).rounded(), width: max(0, c.rect.maxX - pad - x), height: lineH),
                       options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine])
             if !current {
-                let sep = NSAttributedString(string: "›", attributes: [.font: font, .foregroundColor: Theme.muted])
+                let sep = NSAttributedString(string: "›", attributes: [.font: currentFont, .foregroundColor: Theme.accent])
                 let sw = sep.size().width
                 sep.draw(at: NSPoint(x: c.rect.maxX + (separatorWidth - sw) / 2, y: ((bounds.height - lineH) / 2).rounded()))
             }
@@ -283,6 +298,7 @@ final class PathCrumbs: NSView {
     // MARK: QA
 
     var titles: [String] { shown.map(\.title) }
+    var fontSize: CGFloat { font.pointSize }
 
     /// A click on the crumb with this title, or on the free space after the last one ("").
     func qaClick(_ title: String) -> Bool {
