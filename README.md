@@ -52,7 +52,7 @@ This is personal software. It does what I need on my Mac. I don't offer support,
 
 ### Browse
 
-- **2 panes, each with its own tabs, history and view.** ⌘1 and ⌘2 switch between 1 and 2 panes, Tab moves between them, and **Swap Panes** exchanges them.
+- **2 panes, each with its own tabs, history and view.** ⌘1 and ⌘2 switch between 1 and 2 panes, Tab moves between them, ⌥⌘↑ shows the enclosing folder in the other pane, and **Swap Panes** exchanges them.
 - **3 views, remembered per folder:**
   - A list that expands folders in place as a tree (→ and ←, or ⌥⌘→ to expand every folder 1 level per press).
   - Miller columns, each column as wide as its content.
@@ -235,6 +235,7 @@ To go back to Finder, run `defaults delete -g NSFileViewer`. macOS doesn't let a
 | ⌘B              | Show or hide the sidebar             | ⌘+ / ⌘- / ⌘0  | Bigger / smaller / default    |
 | ⌃⌘L             | Switch light or dark theme           | ⌃⌥⌘F          | Bring Filee to the front      |
 | ⇧⌘F             | Add or remove folder in Favourites   | ⌘E            | Eject the volume              |
+| ⌥⌘↑             | Enclosing folder in the other pane   |               |                               |
 
 The full list is in **Filee > Keyboard Shortcuts…**, in the palette and in `SPEC.md` section 4.2.
 

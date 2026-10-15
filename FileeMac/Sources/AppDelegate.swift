@@ -446,7 +446,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             cmd("Go to Volumes in the Sidebar", "focusVolumes"), sep(),
             cmd("Home", "go", args: "~"), cmd("Downloads", "go", args: "~/Downloads"),
             cmd("Applications", "go", args: "/Applications"), sep(),
-            cmd("Switch Active Pane", "switchPane"), cmd("Show This Folder in the Other Pane", "syncPanes"), cmd("Swap Panes", "swapPanes"), sep(),
+            cmd("Switch Active Pane", "switchPane"), cmd("Show This Folder in the Other Pane", "syncPanes"),
+            cmd("Show Enclosing Folder in the Other Pane", "parentInOtherPane"), cmd("Swap Panes", "swapPanes"), sep(),
             cmd("Open Ghostty Here", "terminalHere"), cmd("Reveal in Finder", "revealInFinder"),
         ])
         let windowMenu = NSMenu(title: "Window")

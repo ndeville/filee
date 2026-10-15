@@ -312,6 +312,12 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
             guard let a = args else { return false }
             pane.navigate(to: a)
         case "syncPanes": otherPane.navigate(to: pane.path)
+        case "parentInOtherPane":
+            // The other pane shows the folder 1 level up, with this folder selected. The active pane keeps the keys.
+            let current = pane.path
+            guard current != "/" else { return beep() }
+            if !dualPane { setDual(true) }
+            otherPane.navigate(to: (current as NSString).deletingLastPathComponent, select: [current])
         case "toggleFavourite":
             // The folder that holds the selection (a tree list can select inside an expanded folder).
             toggleFavourite(pane.selectedItems.first?.parent ?? pane.path)

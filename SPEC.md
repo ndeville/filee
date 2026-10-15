@@ -177,6 +177,7 @@ Path Finder keys are kept wherever Nic set one (decision 15).
 | ⌃⌘T        | Open Ghostty here                      | ⌃⌘D        | Add selection to drop stack           |
 | ⌃⌘S        | Calculate folder sizes                 | ⌃⌘C        | Compress to zip                       |
 | ⌘A         | Select all                             | ⌘,         | Settings                              |
+| ⌥⌘↑       | Enclosing folder in the other pane     |            |                                       |
 | ⌘+ / ⌘-    | Zoom files, tab names, type icons      | ⌘0         | Default size (`fontSize`, 14 pt)      |
 | ⌃⌥⌘F       | Bring Filee to the front (global)      | ⌃⌘L        | Switch light or dark theme            |
 | F1         | Toggle single or dual pane (Fn+= on the Kinesis, as in Path Finder) | ⇧⌘F | Add or remove the selection's folder in Favourites |
@@ -202,6 +203,7 @@ Vim keys (`hjkl`) are off and available as a setting (decision 19).
 - Trash only (decision 27). No permanent delete. ⇧⌘⌫ empties the Trash after a confirmation.
 - Undo (decision 24): rename, move, trash (put back), new folder and copy (the copy goes to the Trash). ⌘Z and ⇧⌘Z, 50 steps, for the session.
 - Copy and paste: ⌘D puts the selected files on the pasteboard (with their paths as text, for other apps). ⌘F pastes files into the active folder. ⌘X marks them, then ⌘F moves them.
+- ⌥⌘↑ shows the enclosing folder in the other pane, with the active pane's folder selected. The active pane keeps the keyboard. With 1 pane shown, it opens the second pane.
 - F5 and F6 copy or move the selection to the other pane's folder. With 1 pane shown, they ask for a folder in the palette.
 - Drag and drop: between panes, to and from other apps, to the drop stack. ⌥ forces copy, ⌘ forces move.
 

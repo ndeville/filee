@@ -33,6 +33,7 @@ enum CommandCatalog {
         .init(id: "focusFavourites", title: "Go to Favourites in the Sidebar", key: "alt+cmd+f", args: nil),
         .init(id: "focusVolumes", title: "Go to Volumes in the Sidebar", key: "shift+alt+cmd+f", args: nil),
         .init(id: "syncPanes", title: "Show This Folder in the Other Pane", key: nil, args: nil),
+        .init(id: "parentInOtherPane", title: "Show Enclosing Folder in the Other Pane", key: "alt+cmd+up", args: nil),
         .init(id: "openInNewTab", title: "Open Folder in New Tab", key: nil, args: nil),
         .init(id: "openInOtherPane", title: "Open Folder in Other Pane", key: nil, args: nil),
         .init(id: "swapPanes", title: "Swap Panes", key: nil, args: nil),
