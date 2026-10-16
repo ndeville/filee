@@ -217,7 +217,7 @@ To make "Reveal in Finder" in other apps open Filee, run:
 defaults write -g NSFileViewer com.nicolasdeville.filee
 ```
 
-To go back to Finder, run `defaults delete -g NSFileViewer`. macOS doesn't let another app open folders in place of Finder, so `open <folder>` and Dock folders still open Finder windows.
+Filee's own **Reveal in Finder** still opens Finder: it asks Finder directly (macOS asks you once to let Filee control Finder). To go back to Finder, run `defaults delete -g NSFileViewer`. macOS doesn't let another app open folders in place of Finder, so `open <folder>` and Dock folders still open Finder windows.
 
 ## Daily keys
 

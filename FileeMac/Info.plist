@@ -42,7 +42,7 @@
 	<key>LSMinimumSystemVersion</key>
 	<string>26.0</string>
 	<key>NSAppleEventsUsageDescription</key>
-	<string>Filee asks Finder to empty the Trash.</string>
+	<string>Filee asks Finder to empty the Trash and to reveal files.</string>
 	<key>NSDesktopFolderUsageDescription</key>
 	<string>Filee lists the folders you open.</string>
 	<key>NSDocumentsFolderUsageDescription</key>

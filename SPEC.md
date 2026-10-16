@@ -263,6 +263,7 @@ Default actions at first launch, as examples: open in TextEdit, compare 2 files 
 - Folder sizes (⌃⌘S): computes the size of every folder in the listing in the background and fills the size column. Cached until the folder changes.
 - Open in: Ghostty at the folder (⌃⌘T), Notee for `.md`, CotEditor for text, default app otherwise.
 - Copy path variants in the palette: full path, `~` path, name, Markdown link.
+- Reveal in Finder (⌥⌘R, context menu, sidebar) sends Finder an Apple Event (`reveal`, then `activate`). `NSWorkspace.activateFileViewerSelecting` would go to the app in `NSFileViewer`, which can be Filee itself.
 
 ---
 

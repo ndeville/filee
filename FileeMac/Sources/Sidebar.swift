@@ -448,7 +448,7 @@ extension SidebarController: NSMenuDelegate {
             guard let self else { return }
             self.window.otherPane.navigate(to: row.path)
         }
-        add("Reveal in Finder") { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: row.path)]) }
+        add("Reveal in Finder") { [weak self] in self?.window.revealInFinder([row.path]) }
         switch row.kind {
         case .favourite:
             add("Remove from Favourites") { AppDelegate.shared.removeFavourite(row.path) }

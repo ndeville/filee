@@ -435,8 +435,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         case "copyMarkdownLink":
             copyText(pane.selectedOrFolder.map { "[\($0.name)](\($0.url.absoluteString))" }.joined(separator: "\n"), what: "link")
         case "revealInFinder":
-            let urls = pane.selectedItems.map(\.url)
-            NSWorkspace.shared.activateFileViewerSelecting(urls.isEmpty ? [URL(fileURLWithPath: pane.path)] : urls)
+            let paths = pane.selectedItems.map(\.path)
+            revealInFinder(paths.isEmpty ? [pane.path] : paths)
         case "terminalHere": openTerminal(at: pane.selectedItems.first(where: \.isFolder)?.path ?? pane.targetFolder)
         case "makeSymlink":
             let sel = pane.selectedItems.map(\.path)
@@ -648,6 +648,16 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
             NSAppleScript(source: "tell application \"Finder\" to empty trash")?.executeAndReturnError(&error)
             if let error { self?.showMessage("❌ Empty Trash: \(error[NSAppleScript.errorMessage] ?? "failed")", error: true) } else { self?.showMessage("🗑 Trash emptied") }
         }
+    }
+
+    /// Asks Finder itself: NSWorkspace's activateFileViewerSelecting goes to the file viewer set in NSFileViewer,
+    /// which can be Filee (SPEC 5.5).
+    func revealInFinder(_ paths: [String]) {
+        let items = paths.map { "POSIX file \"\($0.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\""))\"" }
+        let source = "tell application \"Finder\"\nreveal {\(items.joined(separator: ", "))}\nactivate\nend tell"
+        var error: NSDictionary?
+        NSAppleScript(source: source)?.executeAndReturnError(&error)
+        if let error { showMessage("❌ Reveal in Finder: \(error[NSAppleScript.errorMessage] ?? "failed")", error: true) }
     }
 
     private func calculateFolderSizes(_ pane: PaneController) {

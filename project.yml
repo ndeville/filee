@@ -49,7 +49,7 @@ targets:
         NSHighResolutionCapable: true
         NSPrincipalClass: Filee.FileeApplication
         NSSupportsAutomaticTermination: false
-        NSAppleEventsUsageDescription: Filee asks Finder to empty the Trash.
+        NSAppleEventsUsageDescription: Filee asks Finder to empty the Trash and to reveal files.
         NSDesktopFolderUsageDescription: Filee lists the folders you open.
         NSDocumentsFolderUsageDescription: Filee lists the folders you open.
         NSDownloadsFolderUsageDescription: Filee lists the folders you open.
