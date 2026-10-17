@@ -246,7 +246,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     private func updateFreeSpace() {
         let url = URL(fileURLWithPath: activePane.path)
         DispatchQueue.global(qos: .utility).async { [weak self] in
-            let free = (try? url.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]))?.volumeAvailableCapacityForImportantUsage
+            let free = url.volumeFreeSpace
             DispatchQueue.main.async { self?.statusBar.right.stringValue = free.map { "\(Format.size($0)) free" } ?? "" }
         }
     }

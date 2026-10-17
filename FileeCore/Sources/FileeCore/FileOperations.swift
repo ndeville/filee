@@ -34,12 +34,15 @@ public enum OperationError: Error, LocalizedError {
     case cancelled
     case intoItself(String)
     case failed(String, String)
+    /// The item's volume has no Trash (network shares): the UI offers to delete it.
+    case noTrash(String)
 
     public var errorDescription: String? {
         switch self {
         case .cancelled: return "Cancelled"
         case .intoItself(let name): return "Can't copy \(name) into itself"
         case .failed(let name, let why): return "\(name): \(why)"
+        case .noTrash(let name): return "\(name): this volume has no Trash"
         }
     }
 }
@@ -241,10 +244,21 @@ public enum FileOps {
         var result: NSURL?
         do {
             try fm.trashItem(at: URL(fileURLWithPath: path), resultingItemURL: &result)
+        } catch CocoaError.featureUnsupported {
+            throw OperationError.noTrash((path as NSString).lastPathComponent)
         } catch {
             throw OperationError.failed((path as NSString).lastPathComponent, error.localizedDescription)
         }
         return result?.path ?? ""
+    }
+
+    /// Deletes for good, without the Trash. Only after the user confirmed it.
+    public static func delete(_ path: String) throws {
+        do {
+            try fm.removeItem(atPath: path)
+        } catch {
+            throw OperationError.failed((path as NSString).lastPathComponent, error.localizedDescription)
+        }
     }
 
     public static func newFolder(in folder: String, name: String = "untitled folder") throws -> String {

@@ -140,6 +140,14 @@ final class QAHarness {
                 done()
             }
 
+        case "noTrash":
+            // Items in "folder" act as if their volume had no Trash; "confirm" answers the delete question.
+            let ops = OperationCenter.shared
+            ops.qaNoTrashFolders = (step["folder"] as? String).map { [canonicalFolder($0.expandingHome)] } ?? []
+            ops.qaConfirmDelete = step["confirm"] as? Bool
+            record(step)
+            done()
+
         case "settings":
             // Writes keys into settings.json, as Nic would in an editor, and waits for Filee to reload it.
             let url = AppDelegate.shared.config.settingsURL

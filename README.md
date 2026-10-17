@@ -95,7 +95,7 @@ This is personal software. It does what I need on my Mac. I don't offer support,
 - **Drag and drop** between panes, to and from other apps. ⌥ forces a copy, ⌘ forces a move.
 - **Drop stack:** collect files from several folders (⌃⌘D), then copy or move them all to 1 place.
 - **Also:** new folder, new text file, new folder with the selection, duplicate, symbolic link, Open With, Reveal in Finder, and a terminal in the current folder (⌃⌘T).
-- **Safe by design:** Filee moves files to the Trash and never deletes them for good.
+- **Safe by design:** Filee moves files to the Trash and never deletes them for good. On a network share without a Trash, it asks first, as Finder does.
 
 ### Sidebar
 

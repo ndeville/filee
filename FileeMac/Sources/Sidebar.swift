@@ -123,13 +123,13 @@ final class SidebarController: NSObject, NSOutlineViewDataSource, NSOutlineViewD
         detailsLoading = true
         DispatchQueue.global(qos: .utility).async { [weak self] in
             var out: [String: VolumeInfo] = [:]
-            let keys: Set<URLResourceKey> = [.volumeNameKey, .volumeAvailableCapacityForImportantUsageKey, .volumeIsBrowsableKey,
-                                             .volumeIsLocalKey, .volumeIsInternalKey]
+            let keys: Set<URLResourceKey> = [.volumeNameKey, .volumeAvailableCapacityForImportantUsageKey, .volumeAvailableCapacityKey,
+                                             .volumeIsBrowsableKey, .volumeIsLocalKey, .volumeIsInternalKey]
             for url in urls {
                 let v = try? url.resourceValues(forKeys: keys)
                 if v?.volumeIsBrowsable == false { continue }
-                // Network shares report 0: show nothing rather than "0 B". The sidebar is narrow: "free" goes in the tooltip.
-                let free = v?.volumeAvailableCapacityForImportantUsage ?? 0
+                // A volume that reports nothing shows nothing rather than "0 B". The sidebar is narrow: "free" goes in the tooltip.
+                let free = v.flatMap(URL.freeSpace) ?? 0
                 out[url.path] = VolumeInfo(name: v?.volumeName ?? url.lastPathComponent, free: free > 0 ? Format.size(free) : "",
                                            isLocal: v?.volumeIsLocal ?? true, isInternal: v?.volumeIsInternal ?? false)
             }
@@ -566,4 +566,17 @@ final class ClosureMenuItem: NSMenuItem {
     required init(coder: NSCoder) { fatalError() }
 
     @objc private func run() { handler() }
+}
+
+extension URL {
+    /// Network shares report 0 for the "important usage" capacity: they fall back to the plain free space.
+    static func freeSpace(_ v: URLResourceValues) -> Int64? {
+        if let important = v.volumeAvailableCapacityForImportantUsage, important > 0 { return important }
+        return v.volumeAvailableCapacity.map(Int64.init)
+    }
+
+    /// Free space on this URL's volume. Slow on network shares: call it off the main thread.
+    var volumeFreeSpace: Int64? {
+        (try? resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey, .volumeAvailableCapacityKey])).flatMap(URL.freeSpace)
+    }
 }

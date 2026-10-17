@@ -200,7 +200,7 @@ Vim keys (`hjkl`) are off and available as a setting (decision 19).
 - A move on the same volume is a rename. A move across volumes is a copy, then a delete of the source only when the copy succeeded.
 - Name conflicts: a sheet asks Replace, Keep both ("name 2.ext") or Skip, with "apply to all".
 - No copy verification in phase 1 (decision 23: parked).
-- Trash only (decision 27). No permanent delete. ⇧⌘⌫ empties the Trash after a confirmation.
+- Trash only (decision 27). No permanent delete, with 1 exception (Nic, 17th October 2026): a volume without a Trash (a network share, for example) can't take the item, so Filee asks "Delete immediately?" like Finder and deletes it for good only after **Delete**. ⇧⌘⌫ empties the Trash after a confirmation.
 - Undo (decision 24): rename, move, trash (put back), new folder and copy (the copy goes to the Trash). ⌘Z and ⇧⌘Z, 50 steps, for the session.
 - Copy and paste: ⌘D puts the selected files on the pasteboard (with their paths as text, for other apps). ⌘F pastes files into the active folder. ⌘X marks them, then ⌘F moves them.
 - ⌥⌘↑ shows the enclosing folder in the other pane, with the active pane's folder selected. The active pane keeps the keyboard. With 1 pane shown, it opens the second pane.

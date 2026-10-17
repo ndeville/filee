@@ -18,6 +18,11 @@ final class OperationCenter {
         }
     }()
 
+    /// Set by QA: items in these folders act as if their volume had no Trash.
+    var qaNoTrashFolders: Set<String> = []
+    /// Set by QA: answers the "Delete immediately?" question without a dialog.
+    var qaConfirmDelete: Bool?
+
     private var window: BrowserWindowController? { AppDelegate.shared.activeWindow }
 
     private var readOnly: Bool { ProcessInfo.processInfo.environment["FILEE_READONLY"] == "1" }
@@ -116,21 +121,58 @@ final class OperationCenter {
         guard !paths.isEmpty, !refuseIfReadOnly() else { return false }
         var pairs: [UndoRecord.Pair] = []
         var errors: [String] = []
+        var noTrash: [String] = []
         for p in paths {
             do {
+                if qaNoTrashFolders.contains((p as NSString).deletingLastPathComponent) {
+                    throw OperationError.noTrash((p as NSString).lastPathComponent)
+                }
                 pairs.append(.init(p, try FileOps.trash(p)))
+            } catch OperationError.noTrash {
+                noTrash.append(p)
             } catch {
                 errors.append(error.localizedDescription)
             }
         }
         if !pairs.isEmpty { undoStack.push(.trashed(pairs)) }
-        if errors.isEmpty {
-            window?.showMessage("🗑 Moved \(Format.items(pairs.count)) to the Trash · ⌘Z puts back")
-        } else {
+        // Like Finder: a volume without a Trash (a network share) deletes for good, after a question.
+        var deleted = 0
+        if !noTrash.isEmpty, confirmDelete(noTrash) {
+            for p in noTrash {
+                do {
+                    try FileOps.delete(p)
+                    deleted += 1
+                } catch {
+                    errors.append(error.localizedDescription)
+                }
+            }
+        }
+        if !errors.isEmpty {
             window?.showMessage("❌ " + errors.prefix(2).joined(separator: " · "), error: true)
+        } else if deleted > 0 {
+            window?.showMessage("🗑 Deleted \(Format.items(deleted)) for good" + (pairs.isEmpty ? "" : " · moved \(Format.items(pairs.count)) to the Trash"))
+        } else if !pairs.isEmpty {
+            window?.showMessage("🗑 Moved \(Format.items(pairs.count)) to the Trash · ⌘Z puts back")
         }
         touched(paths.map { ($0 as NSString).deletingLastPathComponent })
-        return !pairs.isEmpty
+        return !pairs.isEmpty || deleted > 0
+    }
+
+    /// Asks before items on a volume without a Trash are deleted: that can't be undone.
+    private func confirmDelete(_ paths: [String]) -> Bool {
+        if let answer = qaConfirmDelete { return answer }
+        let url = URL(fileURLWithPath: paths[0])
+        let volume = (try? url.resourceValues(forKeys: [.volumeNameKey]))?.volumeName ?? "this volume"
+        let alert = NSAlert()
+        alert.alertStyle = .critical
+        alert.messageText = paths.count == 1
+            ? "Delete “\(url.lastPathComponent)” immediately?"
+            : "Delete \(Format.items(paths.count)) immediately?"
+        alert.informativeText = "“\(volume)” has no Trash, so Filee deletes \(paths.count == 1 ? "it" : "them") for good. You can't undo this."
+        alert.addButton(withTitle: "Delete")
+        alert.addButton(withTitle: "Cancel")
+        alert.buttons.first?.hasDestructiveAction = true
+        return alert.runModal() == .alertFirstButtonReturn
     }
 
     func rename(_ path: String, to name: String) -> String? {

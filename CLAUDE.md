@@ -101,6 +101,8 @@ cd FileeCore && swift test
 - Square windows (`windowCorners`): macOS 26 has no public API. `FileeWindow` and `FileePanel` answer AppKit's private `_cornerMask`
   with a 3 px square image; `_cornerMaskChanged` applies a change live. Overriding `_cornerRadius` on the window does nothing, and
   swapping the theme frame's class crashes (NSDynamicProperties). Every Filee window and panel must use these 2 classes.
+- SMB shares report 0 for `volumeAvailableCapacityForImportantUsage` and have no Trash (`trashItem` throws `CocoaError.featureUnsupported`).
+  Free space falls back to `volumeAvailableCapacity` (`URL.volumeFreeSpace`); Move to Trash asks before it deletes for good.
 - `reloadData` in the list loses the selection: `Pane.styleChanged` selects the same paths again (zoom, settings.json).
 
 ## Facts
