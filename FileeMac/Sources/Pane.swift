@@ -103,7 +103,14 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
     let pathField = PathField()
     /// The path as clickable folders; the path field replaces it while a path is typed.
     let crumbs = PathCrumbs()
-    let countLabel = label("", size: 11, color: Theme.muted)
+    /// Under the tabs, right of the path: what the folder holds and the free space on its volume, in the file list's size.
+    let countLabel = label("", size: 11, color: Theme.fg2)
+    /// Folders and files in the listing, counted when it changes (not at each selection change).
+    private var contents = (folders: 0, files: 0)
+    private var freeText = ""
+    private var freeAsk = 0
+    /// Set by the README screenshots (QA demoVolumes): the free space every pane shows.
+    static var demoFreeSpace: String?
     // Type-to-filter shows what you type at the top of the pane: the query, a blinking caret, the count.
     let filterBar = ColorView(Theme.accentSoft)
     private let filterStripe = ColorView(Theme.accent)
@@ -193,11 +200,12 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
         let typeW = typeBar.isHidden ? 0 : typeBar.width + 10
         typeBar.frame = NSRect(x: b.width - typeW, y: accentH, width: typeBar.width, height: tabH)
         tabStrip.frame = NSRect(x: 0, y: accentH, width: b.width - typeW, height: tabH)
-        let countW = min(160, textWidth(countLabel.stringValue, font: countLabel.font!) + 12)
+        let countW = min((b.width * 0.5).rounded(), ceil(countLabel.attributedStringValue.size().width) + 12)
+        let countH = ceil(Theme.listSize * 1.3)
         let fieldH = (Theme.listSize * 1.35).rounded()
         pathField.frame = NSRect(x: 10, y: accentH + tabH + ((pathH - fieldH) / 2).rounded(), width: b.width - countW - 20, height: fieldH)
         crumbs.frame = NSRect(x: 5, y: accentH + tabH + 2, width: b.width - countW - 15, height: pathH - 4)
-        countLabel.frame = NSRect(x: b.width - countW - 6, y: accentH + tabH + ((pathH - 16) / 2).rounded(), width: countW, height: 16)
+        countLabel.frame = NSRect(x: b.width - countW - 6, y: accentH + tabH + ((pathH - countH) / 2).rounded(), width: countW, height: countH)
         countLabel.alignment = .right
         let top = accentH + tabH + pathH
         let filterH: CGFloat = filterBar.isHidden ? 0 : 34
@@ -233,14 +241,48 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
         crumbs.show(path: path, active: isActivePane)
     }
 
+    private func countContents() {
+        let folders = folderModel.visible.reduce(0) { $0 + ($1.isFolder ? 1 : 0) }
+        contents = (folders, folderModel.visible.count - folders)
+    }
+
     private func updateCount() {
         let m = folderModel
-        let selected = fileView?.selectedItems.count ?? 0
-        var text = m.query.isEmpty ? Format.items(m.unfilteredCount) : "\(m.visible.count) of \(m.unfilteredCount)"
-        if selected > 0 { text = "\(selected) selected · " + text }
-        if m.types != .all { text = "\(m.types.title) · " + text }
-        countLabel.stringValue = text
+        // The selection is in the status bar: this line leaves the path its room.
+        var parts: [String] = []
+        if m.types != .all { parts.append(m.types.title) }
+        if !m.query.isEmpty {
+            parts.append("\(m.visible.count) of \(m.unfilteredCount)")
+        } else if contents.folders + contents.files == 0 {
+            parts.append("0 items")
+        } else {
+            if contents.folders > 0 { parts.append(contents.folders == 1 ? "1 folder" : "\(contents.folders.formatted()) folders") }
+            if contents.files > 0 { parts.append(contents.files == 1 ? "1 file" : "\(contents.files.formatted()) files") }
+        }
+        let font = Theme.listFont()
+        let text = NSMutableAttributedString(string: parts.joined(separator: " · "), attributes: [.font: font, .foregroundColor: Theme.fg2])
+        if !freeText.isEmpty {
+            text.append(NSAttributedString(string: "  ·  ", attributes: [.font: font, .foregroundColor: Theme.muted]))
+            text.append(NSAttributedString(string: freeText, attributes: [.font: font, .foregroundColor: Theme.fg2]))
+        }
+        countLabel.attributedStringValue = text
         layout()
+    }
+
+    /// Free space on the folder's volume: slow on network shares (10 to 150 ms), so off the main thread.
+    private func updateFreeSpace() {
+        freeAsk += 1
+        let ask = freeAsk, url = URL(fileURLWithPath: path)
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let free = url.volumeFreeSpace
+            DispatchQueue.main.async {
+                guard let self, ask == self.freeAsk else { return }
+                let text = Self.demoFreeSpace.map { "\($0) free" } ?? free.map { "\(Format.size($0)) free" } ?? ""
+                guard text != self.freeText else { return }
+                self.freeText = text
+                self.updateCount()
+            }
+        }
     }
 
     /// Shows only 1 family of files in this tab (folders stay), or everything again.
@@ -321,7 +363,9 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
         model.startWatching()
         updatePathLabel()
         tabStrip.titles = tabs.map { $0.folder.name }
+        countContents()
         updateCount()
+        updateFreeSpace()
     }
 
     private var pendingSelection: [String] = []
@@ -349,7 +393,9 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
             messageLabel.isHidden = true
         }
         updateFilterBar()
+        countContents()
         updateCount()
+        if reloaded { updateFreeSpace() }
         window.paneContentChanged(self)
         Profile.mark("pane rest", t)
     }
@@ -506,7 +552,7 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
         // The tab names, the path and the type filter follow the file list's size.
         tabStrip.active = tabStrip.active
         typeBar.styleChanged()
-        layout()
+        updateCount()
     }
 
     var selectedItems: [FileItem] { fileView.selectedItems }
@@ -686,7 +732,6 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
     func fileView(open item: FileItem) { open(item) }
 
     func fileViewSelectionChanged() {
-        updateCount()
         window.selectionChanged(in: self)
     }
 

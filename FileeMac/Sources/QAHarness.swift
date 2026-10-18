@@ -303,6 +303,9 @@ final class QAHarness {
                         info: SidebarController.VolumeInfo(name: name, free: v["free"] as? String ?? "", isLocal: v["local"] as? Bool ?? true,
                                                  isInternal: v["internal"] as? Bool ?? false))
             }
+            // The panes show the startup volume's made-up free space, not this Mac's.
+            PaneController.demoFreeSpace = list.first { $0["path"] as? String == "/" }?["free"] as? String
+            for p in wc.panes { p.reload() }
             record(step)
             done()
 
@@ -441,7 +444,7 @@ final class QAHarness {
         }
         return ["widths": widths, "path": p.path, "selected": names(p.selectedItems), "visible": p.folderModel.visible.count,
                 "query": p.folderModel.query, "view": p.tab.view.rawValue, "activePane": wc.activePaneIndex,
-                "dual": wc.dualPane, "tabs": p.tabs.count, "status": wc.toast.text,
+                "dual": wc.dualPane, "tabs": p.tabs.count, "count": p.countLabel.stringValue, "status": wc.toast.text,
                 "favourites": wc.sidebar.favouritesOutline]
     }
 
@@ -504,6 +507,7 @@ final class QAHarness {
             ok = ok && (fits || tight)
         }
         if let s = step["statusContains"] as? String { ok = ok && wc.toast.text.contains(s) }
+        if let s = step["countContains"] as? [String] { ok = ok && s.allSatisfy { p.countLabel.stringValue.contains($0) } }
         if let s = step["stack"] as? Int { ok = ok && AppDelegate.shared.state.dropStack.count == s }
         if let n = step["transferRows"] as? Int { ok = ok && wc.transfers.rows.count == n && (n == 0 || wc.transfers.frame.height > 50) }
         if step["ejectButtons"] as? Bool == true {

@@ -57,6 +57,7 @@ This is personal software. It does what I need on my Mac. I don't offer support,
   - A list that expands folders in place as a tree (→ and ←, or ⌥⌘→ to expand every folder 1 level per press).
   - Miller columns, each column as wide as its content.
   - Thumbnails from 64 to 384 px. A folder that holds mostly images opens as thumbnails on the first visit.
+- **Folders, files and free space under each pane's tabs,** in the file list's size: "16 folders · 63 files · 9.7 TB free".
 - **Columns that fit their content** every time a folder loads. Name, size, modified and kind show by default. Date added, created, extension and item count are a right-click away.
 - **Readable dates:** "today 14:05", "yesterday", "3 days ago", then `2026-10-08 14:05`.
 - **New today:** a red dot marks every file added to its folder today. The dots reset at midnight.
@@ -76,7 +77,7 @@ This is personal software. It does what I need on my Mac. I don't offer support,
 <p align="center">
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/type-filter-zoom-dark.png">
-  <img src="assets/screenshots/type-filter-zoom-light.png" width="460" alt="Close-up of the file-type filter: the All button, then 1 button per file type with the icon of its app (Preview for PDF, PowerPoint, Word, Excel, a Markdown editor, VLC for video, Photos for images). PDF is selected, and the count under the buttons reads PDF, 1 selected, 6 items.">
+  <img src="assets/screenshots/type-filter-zoom-light.png" width="460" alt="Close-up of the file-type filter: the All button, then 1 button per file type with the icon of its app (Preview for PDF, PowerPoint, Word, Excel, a Markdown editor, VLC for video, Photos for images). PDF is selected, and the count under the buttons shows the PDF filter, the folders and files, and the free space.">
 </picture>
 </p>
 

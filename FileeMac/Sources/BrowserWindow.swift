@@ -18,19 +18,17 @@ final class RootView: FlippedView {
     }
 }
 
-/// The status bar: selection and free space. Messages are in Toast, copy and move progress in TransferPanel.
+/// The status bar: the selection. Each pane shows its free space under its tabs. Messages are in Toast, copy and move progress in TransferPanel.
 final class StatusBar: FlippedView {
     let left = label("", size: 11.5, color: Theme.muted)
-    let right = label("", size: 11.5, color: Theme.muted)
     let themeButton = iconButton("circle.lefthalf.filled", tip: "Switch light or dark theme (⌃⌘L)", target: nil, action: #selector(BrowserWindowController.toggleThemeClicked(_:)))
 
     override init(frame: NSRect) {
         super.init(frame: frame)
         wantsLayer = true
         layer?.backgroundColor = Theme.surface.cgColor
-        right.alignment = .right
         left.lineBreakMode = .byTruncatingTail
-        for v in [left, right, themeButton] { addSubview(v) }
+        for v in [left, themeButton] { addSubview(v) }
     }
 
     required init?(coder: NSCoder) { fatalError() }
@@ -42,9 +40,8 @@ final class StatusBar: FlippedView {
     override func layout() {
         super.layout()
         let w = bounds.width, h = bounds.height
-        left.frame = NSRect(x: 10, y: (h - 15) / 2, width: w * 0.6, height: 15)
+        left.frame = NSRect(x: 10, y: (h - 15) / 2, width: w - 46, height: 15)
         themeButton.frame = NSRect(x: w - 26, y: (h - 16) / 2, width: 16, height: 16)
-        right.frame = NSRect(x: w * 0.72 - 10, y: (h - 15) / 2, width: w * 0.28 - 22, height: 15)
     }
 }
 
@@ -239,16 +236,6 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         titleBar.path.stringValue = activePane.folderModel.displayPath
         titleBar.needsLayout = true
         window?.representedURL = URL(fileURLWithPath: activePane.path)
-        updateFreeSpace()
-    }
-
-    /// Free space is slow to ask for (10 ms or more): off the main thread.
-    private func updateFreeSpace() {
-        let url = URL(fileURLWithPath: activePane.path)
-        DispatchQueue.global(qos: .utility).async { [weak self] in
-            let free = url.volumeFreeSpace
-            DispatchQueue.main.async { self?.statusBar.right.stringValue = free.map { "\(Format.size($0)) free" } ?? "" }
-        }
     }
 
     func selectionChanged(in pane: PaneController) {
