@@ -147,7 +147,7 @@ def suites(fx: dict) -> dict:
             {"op": "key", "keys": "cmd+i"},
             {"op": "wait", "ms": 500},
             {"op": "expect", "label": "cmd+i: a folder's size, size on disk and contents, walked in the background",
-             "infoContains": ["Size\t9 B (9 bytes)", "On disk\t", "Contains\t2 files · 1 folder", "Permissions\tdrwx"]},
+             "infoContains": ["Size\t9 B\n", "On disk\t", "Files\t2\n", "Folders\t1\n", "Permissions\tdrwx"]},
             {"op": "select", "pane": 0, "names": ["IMG01.png"]},
             {"op": "key", "keys": "ctrl+cmd+i"},
             {"op": "wait", "ms": 500},

@@ -18,7 +18,7 @@ final class InfoPanel: NSObject {
 
     /// The rows in the order they show. A row shows once it has a value.
     private static let order = [
-        "Items", "Kind", "Where", "Size", "On disk", "Contains",
+        "Items", "Kind", "Where", "Size", "On disk", "Files", "Folders",
         "Created", "Modified", "Added", "Last opened",
         "Dimensions", "Video", "Duration", "Pages", "Camera", "Taken", "Version",
         "Opens with", "Tags", "Where from", "Points to", "Permissions", "Flags", "Volume",
@@ -69,7 +69,7 @@ final class InfoPanel: NSObject {
         if it.kind == .directory {
             values["Size"] = Self.calculating
         } else {
-            values["Size"] = "\(Format.size(it.size)) (\(it.size.formatted()) bytes)"
+            values["Size"] = Format.size(it.size)
         }
         if let c = attrs[.creationDate] as? Date { values["Created"] = Format.fullDate(c.timeIntervalSince1970) }
         if let m = attrs[.modificationDate] as? Date { values["Modified"] = Format.fullDate(m.timeIntervalSince1970) }
@@ -86,7 +86,7 @@ final class InfoPanel: NSObject {
 
     private func fillMany(_ items: [FileItem]) {
         let folders = items.filter { $0.kind == .directory }.count
-        values["Items"] = "\(Self.count(items.count - folders, "file")) · \(Self.count(folders, "folder"))"
+        values["Items"] = Format.items(items.count)
         let parents = Set(items.map(\.parent))
         if parents.count == 1, let p = parents.first { values["Where"] = p.abbreviatingHome }
         values["Size"] = folders > 0 ? Self.calculating : Format.size(items.reduce(0) { $0 + max(0, $1.size) })
@@ -130,9 +130,10 @@ final class InfoPanel: NSObject {
     private static func sizeRows(_ u: DirectoryLister.Usage, done: Bool) -> [String: String] {
         let more = done ? "" : " so far"
         return [
-            "Size": "\(Format.size(u.bytes)) (\(u.bytes.formatted()) bytes)\(more)",
+            "Size": Format.size(u.bytes) + more,
             "On disk": Format.size(u.allocated) + more,
-            "Contains": "\(count(u.files, "file")) · \(count(u.folders, "folder"))\(more)",
+            "Files": u.files.formatted() + more,
+            "Folders": u.folders.formatted() + more,
         ]
     }
 
@@ -217,9 +218,6 @@ final class InfoPanel: NSObject {
         default: return s.trimmingCharacters(in: .whitespaces)
         }
     }
-
-    /// "1 file", "1,234 files".
-    private static func count(_ n: Int, _ noun: String) -> String { "\(n.formatted()) \(noun)\(n == 1 ? "" : "s")" }
 
     /// "drwxr-xr-x" from the POSIX mode bits.
     private static func mode(_ p: Int, folder: Bool) -> String {
