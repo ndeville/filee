@@ -309,6 +309,13 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
             // The folder that holds the selection (a tree list can select inside an expanded folder).
             toggleFavourite(pane.selectedItems.first?.parent ?? pane.path)
         case "focusFavourites": focusSidebar(section: 0)
+        case "sendToDialog":
+            // Foldee moves the open Open or Save dialog to the selected file, else to this folder. Delivered at once,
+            // because Foldee is never the active app.
+            let sel = pane.selectedItems
+            let path = sel.count == 1 && !sel[0].isFolder ? sel[0].path : pane.path
+            DistributedNotificationCenter.default().postNotificationName(.init("com.nicolasdeville.foldee.goto"), object: nil,
+                                                                         userInfo: ["path": path, "source": "filee"], deliverImmediately: true)
         case "focusVolumes": focusSidebar(section: 1)
         case "swapPanes":
             let a = pane.path, b = otherPane.path

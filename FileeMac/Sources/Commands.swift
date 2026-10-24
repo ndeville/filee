@@ -37,6 +37,8 @@ enum CommandCatalog {
         .init(id: "openInNewTab", title: "Open Folder in New Tab", key: nil, args: nil),
         .init(id: "openInOtherPane", title: "Open Folder in Other Pane", key: nil, args: nil),
         .init(id: "swapPanes", title: "Swap Panes", key: nil, args: nil),
+        // Foldee (~/ai/lab/foldee, SPEC 9): sends the open Open or Save dialog here.
+        .init(id: "sendToDialog", title: "Send to Dialog", key: "alt+cmd+o", args: nil),
         // Views
         .init(id: "singlePane", title: "Single Pane", key: "cmd+1", args: nil),
         .init(id: "dualPane", title: "Dual Pane", key: "cmd+2", args: nil),

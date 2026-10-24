@@ -448,6 +448,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             cmd("Applications", "go", args: "/Applications"), sep(),
             cmd("Switch Active Pane", "switchPane"), cmd("Show This Folder in the Other Pane", "syncPanes"),
             cmd("Show Enclosing Folder in the Other Pane", "parentInOtherPane"), cmd("Swap Panes", "swapPanes"), sep(),
+            cmd("Send to Dialog", "sendToDialog"), sep(),
             cmd("Open Ghostty Here", "terminalHere"), cmd("Reveal in Finder", "revealInFinder"),
         ])
         let windowMenu = NSMenu(title: "Window")
