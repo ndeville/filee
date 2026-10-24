@@ -100,6 +100,12 @@ final class QAHarness {
             record(step, ["path": p.path])
             done()
 
+        case "url":
+            // A filee:// URL straight into the router (agent interface), without LaunchServices.
+            if let u = URL(string: step["url"] as? String ?? "") { AppDelegate.shared.route(u) }
+            record(step, ["path": wc.activePane.path])
+            done()
+
         case "command":
             let ok = wc.perform(step["id"] as? String ?? "", args: step["args"] as? String)
             record(step, ok: ok)

@@ -92,6 +92,8 @@ if $INSTALL; then
   rm -rf /Applications/Filee.app
   cp -R build/Filee.app /Applications/Filee.app
   echo "✅ installed /Applications/Filee.app"
+  # The agent CLI on the PATH (agent interface).
+  mkdir -p ~/.local/bin && ln -sf "$PWD/filee.py" ~/.local/bin/filee
 fi
 
 size=$(du -sh build/Filee.app | cut -f1)

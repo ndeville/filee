@@ -239,6 +239,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     }
 
     func selectionChanged(in pane: PaneController) {
+        LiveState.publish()
         guard panes.count == 2, pane === activePane else { return }
         let sel = pane.selectedItems
         if sel.isEmpty {

@@ -18,6 +18,7 @@ FileeMac/Sources/ AppKit app. AppDelegate (menus, config, state), BrowserWindow 
                   Operations, ActionRunner, QuickLook, HotKey,
                   FileWatch (FSEvents), Commands (catalog + key map), QAHarness, Profile,
                   Toast (messages), TransferPanel (copy and move progress), TitleBar (logo, name, folder),
+                  LiveState (run/live.json for `filee status`: active folder, selection, transfers, last URL action),
                   TypeFilterBar (the tab's file-type filter; the families are FileTypeFilter in FileeCore; each button shows the icon of the family's default app, loaded in the background: 75 ms).
 assets/AppIcon.svg The app icon (1024 px, full canvas) with the name "Filee" (Lato Black 200, as in Notee's icon).
                   assets/AppIcon-small.svg: without the name, for 16 to 64 px. Both are generated from
@@ -26,6 +27,7 @@ assets/AppIcon.svg The app icon (1024 px, full canvas) with the name "Filee" (La
 FileeMac/Resources/Logo.png The title bar icon: assets/TitleBarLogo.svg (the rounded red tile, which stands out on the red bar) at 128 px (rsvg-convert).
 assets/nicai/     NicAI Design kit, vendored by nicai_design.py. Never edit by hand.
 project.yml       XcodeGen project. The .xcodeproj is generated: don't edit it, don't commit it.
+filee.py          The agent CLI (Python standard library, runs on Python 3.9).
 qa.py             End-to-end QA on fixture folders in $TMPDIR/filee-qa.
 benchmark.py      Filee vs Finder, Path Finder and ForkLift (launch, open a 10,000-file folder, memory, app size). A Swift
                   probe (in the script) times the first files on screen with ScreenCaptureKit and Vision OCR. Writes
@@ -70,6 +72,20 @@ cd FileeCore && swift test
 - Nic's global App Shortcuts: ⇧⌘F is Find, ⌥⌘F is Bring All to Front. Filee has neither menu item, so the key map gets both.
 - ⌘D and ⌘F are Copy and Paste through Nic's global App Shortcuts on the **Edit > Copy** and **Edit > Paste** menu titles. Never bind ⌘D or ⌘F in the key map, never rename those menu items.
 
+## Agent interface
+
+Agents (Claude Code, NicAI CC tasks) drive Filee through the `filee` CLI (`filee.py`, linked at `~/.local/bin/filee` by `build.sh --install`). Every command takes `--json` and prints 1 JSON document; errors carry `ok: false`, `error` and `hint`, with exit codes 1 (error), 2 (usage), 3 (refused) and 4 (Filee isn't running). Writes go through `filee://` URLs opened in the background with the running copy (`open -g -a`) and a request id, and the CLI confirms each one through `~/.filee/run/live.json`, which the app rewrites on every navigation, selection and transfer. Nothing comes to the front unless the command has `--show`.
+
+```bash
+filee describe --json                 # every command, with its effect (read or write)
+filee status --json                   # running, active_path, selection_count, transfers, stack
+filee selection --json                # the selected paths in the active pane
+filee reveal ~/Projects/report.pdf --json  # the file selected in its folder, in the active pane
+filee new-tab ~/Projects --json       # a new tab in the active pane
+filee stack-add a.txt b.txt --json    # add files to the drop stack
+filee tabs --json                     # every pane's tabs
+```
+
 ## Environment variables
 
 | Variable             | Effect                                                               |
@@ -82,6 +98,7 @@ cd FileeCore && swift test
 | `FILEE_QA_CONFLICT`  | `keepBoth`, `replace` or `skip`: answers name conflicts without a dialog |
 | `FILEE_PROFILE`      | `1` logs the time of each listing, sort, view and launch phase       |
 | `FILEE_DEBUG_KEYS`   | `1` logs how the key map resolves each key press                     |
+| `FILEE_OPEN_TOOL`    | `filee` CLI: the `open` command (QA uses a fake)                     |
 
 ## AppKit lessons (don't undo these)
 

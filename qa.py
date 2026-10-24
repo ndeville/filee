@@ -493,6 +493,152 @@ def run_suite(name: str, steps: list, home: Path, out: Path, fx: dict) -> dict:
     return report
 
 
+FAKE_OPEN = r"""#!/usr/bin/env python3
+# Stands in for /usr/bin/open in the cli suite: answers a filee:// URL the way the app does, in live.json.
+import json, os, sys, urllib.parse
+url = urllib.parse.urlparse(sys.argv[-1])
+q = urllib.parse.parse_qs(url.query)
+live = os.path.join(os.environ["FILEE_HOME"], "run", "live.json")
+with open(live, encoding="utf-8") as f:
+    state = json.load(f)
+state["last_action"] = {"name": url.netloc, "rid": q.get("rid", [""])[0], "ok": os.environ.get("FAKE_OK", "1") == "1"}
+if url.netloc == "stack-add":
+    state["stack"] = state.get("stack", []) + q.get("path", [])
+if url.netloc == "reveal":
+    state["active_path"] = q["path"][0]
+with open(live + ".tmp", "w", encoding="utf-8") as f:
+    json.dump(state, f)
+os.replace(live + ".tmp", live)
+"""
+
+
+def suite_cli() -> int:
+    """The agent interface contract (~/ai/.claude/skills/appee/references/agent-interface.md) on a scratch home.
+
+    Never sends a real filee:// URL: LaunchServices would hand it to Nic's running Filee. Writes run against a
+    fake `open` (FILEE_OPEN_TOOL), and the app's own echo runs through the QA harness `url` op.
+    """
+    import re
+    import threading
+    fails = 0
+    checks = 0
+
+    def ok(cond, label):
+        nonlocal fails, checks
+        checks += 1
+        fails += not cond
+        if not cond:
+            print(f"   ❌ {label}", file=sys.stderr)
+
+    base = BASE / "cli"
+    fx = build_fixtures(base / "fixtures")
+    home = base / "home"
+    if home.exists():
+        shutil.rmtree(home)
+    write_home(home, fx)
+    a, b = Path(fx["A"]), Path(fx["B"])
+    saved = json.loads((home / "state.json").read_text(encoding="utf-8"))
+    saved["dropStack"] = [str(a / "alpha.txt")]
+    (home / "state.json").write_text(json.dumps(saved), encoding="utf-8")
+    fake = base / "fake-open.py"
+    fake.write_text(FAKE_OPEN, encoding="utf-8")
+    fake.chmod(0o755)
+    cli = [sys.executable, str(ROOT / "filee.py")]
+    env = dict(os.environ, FILEE_HOME=str(home), FILEE_OPEN_TOOL=str(fake))
+    env.pop("PYTHONPATH", None)
+
+    def j(args: list, e: dict = env):
+        r = subprocess.run(cli + args + ["--json"], env=e, capture_output=True, text=True)
+        try:
+            return r.returncode, json.loads(r.stdout)
+        except json.JSONDecodeError:
+            return r.returncode, None
+
+    rc, d = j(["describe"])
+    names = {x["name"] for x in (d or {}).get("commands", [])}
+    helptext = subprocess.run(cli + ["--help"], capture_output=True, text=True).stdout
+    parsed = set(re.search(r"\{([a-z,\-]+)\}", helptext).group(1).split(","))
+    ok(rc == 0 and d and d["app"] == "filee", "describe --json")
+    ok(names == parsed, f"describe lists every subcommand ({sorted(parsed - names)} missing)")
+    ok(d and all(x["effect"] in ("read", "write", "destructive") for x in d["commands"]), "each command has an effect")
+    rc, s = j(["status"])
+    ok(rc == 0 and s and s["running"] is False and s["pid"] is None and s["stack"] == 1, "status --json without the app")
+    rc, s = j(["stack"])
+    ok(rc == 0 and s and s["count"] == 1 and s["paths"] == [str(a / "alpha.txt")], "stack --json reads state.json without the app")
+    rc, s = j(["selection"])
+    ok(rc == 4 and s and s["ok"] is False, "selection without the app exits 4")
+    rc, s = j(["reveal", str(a)])
+    ok(rc == 4 and s and s["ok"] is False, "a write without the app exits 4")
+    rc, s = j(["reveal", str(a / "missing.txt")])
+    ok(rc == 1 and s and s["ok"] is False, "reveal refuses a missing path")
+    rc, s = j(["new-tab", str(a / "alpha.txt")])
+    ok(rc == 1 and s and s["ok"] is False, "new-tab refuses a file")
+    r = subprocess.run(cli + ["no-such-command", "--json"], env=env, capture_output=True, text=True)
+    ok(r.returncode == 2, "an unknown command is a usage error")
+
+    # A live state with this process as the app: the CLI's half of a confirmed write.
+    live = home / "run" / "live.json"
+    live.parent.mkdir(parents=True, exist_ok=True)
+    live.write_text(json.dumps({"pid": os.getpid(), "version": "qa", "windows": 1, "transfers": 0, "stack": [],
+                                "active_path": str(a), "selection": [str(a / "alpha.txt"), str(a / "beta.md")],
+                                "selection_count": 2, "active_pane": 0, "dual_pane": True,
+                                "panes": [{"tabs": [str(a)], "active_tab": 0}, {"tabs": [str(b)], "active_tab": 0}]}), encoding="utf-8")
+    rc, s = j(["status"])
+    ok(rc == 0 and s and s["running"] and s["selection_count"] == 2 and s["active_path"] == str(a), "status --json reads live.json")
+    rc, s = j(["selection", "-n", "1"])
+    ok(rc == 0 and s and s["count"] == 2 and len(s["paths"]) == 1 and s["more"] is True, "selection -n 1 --json is bounded")
+    rc, s = j(["tabs"])
+    ok(rc == 0 and s and len(s["panes"]) == 2, "tabs --json")
+    rc, s = j(["stack-add", str(a / "beta.md")])
+    ok(rc == 0 and s and s["confirmed"] and s["stack"] == 1, "stack-add --json is confirmed and changes status")
+    rc, s = j(["reveal", str(b)])
+    ok(rc == 0 and s and s["confirmed"] and s["active_path"] == str(b.resolve()), "reveal --json is confirmed")
+    rc, s = j(["stack-clear"], dict(env, FAKE_OK="0"))
+    ok(rc == 1 and s and s["ok"] is False, "an action the app reports as failed exits 1")
+    live.write_text(json.dumps({"pid": 999_999}), encoding="utf-8")
+    rc, s = j(["status"])
+    ok(rc == 0 and s and s["running"] is False, "a dead pid in live.json means not running")
+
+    # The app's half: the running QA instance publishes live.json and echoes request ids.
+    live.unlink()
+    steps = [{"op": "navigate", "pane": 0, "path": str(a)},
+             {"op": "select", "pane": 0, "names": ["alpha.txt", "beta.md"]},
+             {"op": "wait", "ms": 1500},
+             {"op": "url", "url": f"filee://reveal?path={b}&rid=qarid1"},
+             {"op": "url", "url": f"filee://stack-add?path={a / 'beta.md'}&rid=qarid2"},
+             {"op": "wait", "ms": 3000}]
+    out = BASE / "reports" / datetime.now().strftime("%y%m%d-%H%M%S") / "cli-app"
+    t = threading.Thread(target=run_suite, args=("cli-app", steps, home, out, fx))
+    t.start()
+    seen_selection = False
+    s, state = None, {}
+    for _ in range(120):
+        time.sleep(0.1)
+        rc, s = j(["status"])
+        if s and s.get("selection_count") == 2:
+            rc2, sel = j(["selection"])
+            seen_selection = bool(sel and [Path(p).name for p in sel["paths"]] == ["alpha.txt", "beta.md"])
+        try:
+            state = json.loads(live.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            state = {}
+        if (state.get("last_action") or {}).get("rid") == "qarid2":
+            break
+    rc, s = j(["status"])  # after the echo: status read in the loop can predate the last write
+    ok(seen_selection, "selection --json reads the running app's selection")
+    ok(s and s["running"] and s["pid"] and s["windows"] == 1, "status --json reads the running app's live.json")
+    ok(os.path.realpath(str(s and s.get("active_path"))) == os.path.realpath(b), "reveal moved the active pane")
+    last = state.get("last_action") or {}
+    ok(last.get("rid") == "qarid2" and last.get("ok") is True and last.get("name") == "stack-add", "the app echoes the request id")
+    ok(s and s["stack"] == 2, "stack-add changed the drop stack")
+    ok(str(state.get("bundle_path", "")).endswith("Filee.app"), "live.json names the app copy, for open -a")
+    t.join()
+    rc, s = j(["status"])
+    ok(s and s["running"] is False, "status --json after the app quit")
+    print(f"{'✅' if not fails else '❌'} cli: {checks - fails}/{checks} checks passed")
+    return fails
+
+
 def main():
     ap = argparse.ArgumentParser(description="Filee end-to-end QA")
     ap.add_argument("--only", help="run 1 suite")
@@ -502,7 +648,7 @@ def main():
     if not APP.exists():
         print("❌ build/Filee.app missing: run ./build.sh", file=sys.stderr)
         sys.exit(1)
-    names = list(suites({"A": "", "B": "", "big": "", "pics": ""}).keys())
+    names = list(suites({"A": "", "B": "", "big": "", "pics": ""}).keys()) + ["cli"]
     if args.list:
         print("\n".join(names))
         return
@@ -510,6 +656,10 @@ def main():
     total_fail = 0
     stamp = datetime.now().strftime("%y%m%d-%H%M%S")
     for name in chosen:
+        if name == "cli":
+            print("▶ cli (agent interface)…", flush=True)
+            total_fail += suite_cli()
+            continue
         base = BASE / name
         fx = build_fixtures(base / "fixtures")
         home = base / "home"

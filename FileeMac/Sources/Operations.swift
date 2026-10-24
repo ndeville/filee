@@ -63,12 +63,14 @@ final class OperationCenter {
             DispatchQueue.main.async { panel?.update(t, p) { t.cancel.cancel() } }
         }
         running.append(t)
+        LiveState.publish()
         let sourceFolders = Array(Set(sources.map { ($0 as NSString).deletingLastPathComponent }))
         queue.async { [weak self] in
             let record = t.run()
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.running.removeAll { $0 === t }
+                LiveState.publish()
                 if let record { self.undoStack.push(record) }
                 let verb = mode == .copy ? "Copied" : "Moved"
                 if !t.errors.isEmpty {

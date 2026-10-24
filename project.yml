@@ -10,7 +10,7 @@ packages:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "0.1.0"
+    MARKETING_VERSION: "0.1.1"
     CURRENT_PROJECT_VERSION: "1"
     ARCHS: arm64
     ONLY_ACTIVE_ARCH: YES
@@ -55,6 +55,10 @@ targets:
         NSDownloadsFolderUsageDescription: Filee lists the folders you open.
         NSRemovableVolumesUsageDescription: Filee lists the volumes you open.
         NSNetworkVolumesUsageDescription: Filee lists the volumes you open.
+        CFBundleURLTypes:
+          - CFBundleURLName: com.nicolasdeville.filee
+            CFBundleURLSchemes:
+              - filee
         CFBundleDocumentTypes:
           - CFBundleTypeName: Folder
             CFBundleTypeRole: Viewer

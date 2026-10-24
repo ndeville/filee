@@ -251,6 +251,20 @@ The full list is in **Filee > Keyboard Shortcuts…**, in the palette and in `SP
 | `actions.json`     | Custom actions                                                            |
 | `state.json`       | Windows, tabs, views per folder, recent folders and the drop stack        |
 
+## Agent interface
+
+Agents (Claude Code, NicAI CC tasks) drive Filee through the `filee` CLI (`filee.py`; `build.sh --install` links it at `~/.local/bin/filee`). Every command takes `--json` and prints 1 JSON document; errors carry `ok: false`, `error` and `hint`, with exit codes 1 (error), 2 (usage), 3 (refused) and 4 (Filee isn't running). Writes go through `filee://` URLs opened in the background with the running copy (`open -g -a`) and a request id, and the CLI confirms each one through `~/.filee/run/live.json`, which the app rewrites on every navigation, selection and transfer. Nothing comes to the front unless the command has `--show`.
+
+```bash
+filee describe --json                 # every command, with its effect (read or write)
+filee status --json                   # running, active_path, selection_count, transfers, stack
+filee selection --json                # the selected paths in the active pane
+filee reveal ~/Projects/report.pdf --json  # the file selected in its folder, in the active pane
+filee new-tab ~/Projects --json       # a new tab in the active pane
+filee stack-add a.txt b.txt --json    # add files to the drop stack
+filee tabs --json                     # every pane's tabs
+```
+
 ## Develop
 
 `SPEC.md` is the specification. `CLAUDE.md` holds the layout, the rules and the AppKit lessons, for you and for Claude Code.

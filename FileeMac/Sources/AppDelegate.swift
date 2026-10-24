@@ -12,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var configWatch: UUID?
     private var midnightTimer: Timer?
     private var pendingOpen: [URL] = []
+    private var pendingActions: [URL] = []
     private var launched = false
     let launchStart = ProcessInfo.processInfo.systemUptime
     private(set) var launchMilliseconds = 0
@@ -32,6 +33,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // "Reveal in Finder" from other apps, once Filee is the default file viewer (SPEC 11, item 3).
         NSAppleEventManager.shared().setEventHandler(self, andSelector: #selector(handleReveal(_:reply:)),
                                                      forEventClass: AEEventClass(kAEMiscStandards), andEventID: AEEventID(kAEMakeObjectsVisible))
+        // filee:// URLs for agents (agent interface). Its own handler, so they never reach application(_:open:).
+        NSAppleEventManager.shared().setEventHandler(self, andSelector: #selector(handleURL(_:reply:)),
+                                                     forEventClass: AEEventClass(kInternetEventClass), andEventID: AEEventID(kAEGetURL))
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -53,12 +57,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         launched = true
         for url in pendingOpen { reveal(url) }
         pendingOpen = []
+        for url in pendingActions { route(url) }
+        pendingActions = []
         configWatch = FolderWatch.shared.subscribe(config.home.path) { [weak self] in self?.loadConfig(initial: false) }
         GlobalHotKey.shared.action = { [weak self] in self?.summon() }
         GlobalHotKey.shared.register()
         scheduleMidnight()
         if !qa { NSApp.activate(ignoringOtherApps: true) }
         QAHarness.startIfRequested()
+        LiveState.publish()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
@@ -97,7 +104,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// A folder opens in the active pane; a file opens its folder with the file selected.
-    func reveal(_ url: URL) {
+    /// `front: false` (an agent's background URL) leaves the window where it is.
+    func reveal(_ url: URL, front: Bool = true) {
         guard let w = activeWindow else { return }
         var isDir: ObjCBool = false
         FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
@@ -106,7 +114,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             w.activePane.navigate(to: url.deletingLastPathComponent().path, select: [url.path])
         }
-        w.window?.makeKeyAndOrderFront(nil)
+        if front { w.window?.makeKeyAndOrderFront(nil) }
+    }
+
+    @objc private func handleURL(_ event: NSAppleEventDescriptor, reply: NSAppleEventDescriptor) {
+        guard let s = event.paramDescriptor(forKeyword: keyDirectObject)?.stringValue, let url = URL(string: s) else { return }
+        if launched { route(url) } else { pendingActions.append(url) }
+    }
+
+    /// Agent interface: `filee://reveal?path=`, `filee://new-tab?path=`, `filee://stack-add?path=` (repeatable),
+    /// `filee://stack-clear`, `filee://show`. Each takes a request id (`rid`) that live.json echoes. Nothing comes to
+    /// the front unless the URL has `show=1` (or is `show`).
+    func route(_ url: URL) {
+        guard url.scheme == "filee" else { return }
+        let q = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        let paths = q.filter { $0.name == "path" }.compactMap { $0.value?.expandingHome }
+        let exists = !paths.isEmpty && paths.allSatisfy { FileManager.default.fileExists(atPath: $0) }
+        var front = q.contains { $0.name == "show" && $0.value == "1" }
+        let action = url.host ?? ""
+        var ok = true
+        switch action {
+        case "reveal":
+            ok = exists && activeWindow != nil
+            if ok { reveal(URL(fileURLWithPath: paths[0]), front: front) }
+        case "new-tab":
+            var isDir: ObjCBool = false
+            let folder = paths.first.map { FileManager.default.fileExists(atPath: $0, isDirectory: &isDir) && isDir.boolValue } ?? true
+            ok = folder && activeWindow != nil
+            if ok { activeWindow?.activePane.newTab(path: paths.first) }
+        case "stack-add":
+            ok = exists
+            if ok { addToStack(paths) }
+        case "stack-clear": clearStack()
+        case "show": front = true
+        default: ok = false
+        }
+        LiveState.record(action: action, rid: q.first { $0.name == "rid" }?.value, ok: ok)
+        if front { summon() }
     }
 
     func summon() {
@@ -127,11 +171,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         w.activePane.focusContent()
     }
 
-    func windowBecameKey(_ w: BrowserWindowController) { lastKey = w }
+    func windowBecameKey(_ w: BrowserWindowController) {
+        lastKey = w
+        LiveState.publish()
+    }
 
     func windowClosed(_ w: BrowserWindowController) {
         windows.removeAll { $0 === w }
         if lastKey === w { lastKey = windows.first }
+        LiveState.publish()
     }
 
     // MARK: Config
@@ -215,6 +263,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: State
 
     func scheduleSave() {
+        LiveState.publish()
         saveWork?.cancel()
         let work = DispatchWorkItem { [weak self] in self?.saveState() }
         saveWork = work

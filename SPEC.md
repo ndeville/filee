@@ -346,6 +346,17 @@ Results show in the active pane as a virtual folder (decision 34). Every file ac
 
 ---
 
+### 10.1 Agent interface (24th October 2026)
+
+Filee follows the appee agent interface contract (`~/ai/.claude/skills/appee/references/agent-interface.md`), so NicAI can use it inside a task:
+
+- `filee.py` (Python standard library, Python 3.9), linked at `~/.local/bin/filee`. Every command takes `--json`: 1 JSON document on stdout, `ok`, and `error` plus `hint` on failure. Exit codes: 1 error, 2 usage, 3 refused, 4 the app isn't running.
+- `filee describe --json` lists every command with its effect. `filee status --json` gives `running`, `pid`, `version`, `windows`, `active_path`, `selection_count`, `transfers` and `stack`.
+- The app writes `~/.filee/run/live.json` (atomic, on a background queue, coalesced per run-loop turn) at launch, on every navigation, tab, selection, drop stack and transfer change, and after every URL action. It sits 1 folder down because `state.json` is taken and Filee reloads its config on any change in `~/.filee` itself. The selection is capped at 200 paths (`selection_count` has the full count).
+- A new URL scheme, `filee://`: `reveal?path=`, `new-tab?path=`, `stack-add?path=` (repeatable), `stack-clear` and `show`. Each takes a request id (`rid`) that the app echoes in `last_action`, so a write command reports `confirmed: true` only after the app ran it. Nothing activates unless the URL has `show=1`. The CLI opens URLs with the copy that wrote `live.json` (`bundle_path`), so a QA or build copy never gets them.
+- CLI commands: `status`, `selection`, `tabs`, `stack`, `reveal`, `new-tab`, `stack-add`, `stack-clear`, `show`.
+- `qa.py --only cli` tests the contract (24 checks), including the selection, a reveal and a stack-add in a running QA instance (the harness `url` op). It never sends a real `filee://` URL.
+
 ## 11. Open items
 
 | # | Item                                                                                                     |
