@@ -177,22 +177,97 @@ public enum DirectoryLister {
     /// Total logical size of a folder, walking it with getattrlistbulk. `cancelled` is checked per folder.
     /// Doesn't follow symlinks or cross into packages' symlinks; does count package contents.
     public static func totalSize(_ path: String, cancelled: () -> Bool = { false }) -> (bytes: Int64, files: Int) {
-        var bytes: Int64 = 0
-        var files = 0
-        var stack = [path]
+        let u = usage(path, cancelled: cancelled)
+        return (u.bytes, u.files)
+    }
+
+    public struct Usage: Equatable, Sendable {
+        /// Logical size: the bytes in the files.
+        public var bytes: Int64 = 0
+        /// Size on disk: the blocks the files take.
+        public var allocated: Int64 = 0
+        public var files = 0
+        /// Folders inside, not counting the folder itself.
+        public var folders = 0
+        public init() {}
+    }
+
+    private static let fileAllocSize: UInt32 = 0x0000_0004
+
+    /// Logical size, size on disk, files and folders of a folder tree. Asks only for name, type and the 2 sizes,
+    /// so it walks faster than `list`. Doesn't follow symlinks. `cancelled` is checked per folder;
+    /// `progress` gets the totals so far, at most 4 times a second.
+    public static func usage(_ path: String, cancelled: () -> Bool = { false }, progress: ((Usage) -> Void)? = nil) -> Usage {
+        var u = Usage()
+        var reported = ProcessInfo.processInfo.systemUptime
+        var stack = [normalised(path)]
+        let bufferSize = 256 * 1024
+        let buffer = UnsafeMutableRawPointer.allocate(byteCount: bufferSize, alignment: 16)
+        defer { buffer.deallocate() }
+        var request = attrlist()
+        request.bitmapcount = u_short(ATTR_BIT_MAP_COUNT)
+        request.commonattr = cmnReturnedAttrs | cmnName | cmnError | cmnObjType
+        request.fileattr = fileTotalSize | fileAllocSize
+
         while let dir = stack.popLast() {
             if cancelled() { break }
-            guard let items = try? list(dir) else { continue }
-            for item in items {
-                switch item.kind {
-                case .directory: stack.append(item.path)
-                case .file:
-                    bytes += max(0, item.size)
-                    files += 1
-                default: files += 1
+            let fd = open(dir, O_RDONLY | O_DIRECTORY | O_CLOEXEC)
+            guard fd >= 0 else { continue }
+            defer { close(fd) }
+            var supported = true
+            while true {
+                let count = getattrlistbulk(fd, &request, buffer, bufferSize, packInvalAttrs)
+                if count < 0 { supported = false; break }
+                if count == 0 { break }
+                var entry = buffer
+                for _ in 0..<count {
+                    let length = Int(entry.loadUnaligned(as: UInt32.self))
+                    var p = entry + 4
+                    let returned = p.loadUnaligned(as: attribute_set_t.self)
+                    p += MemoryLayout<attribute_set_t>.size
+                    let error = p.loadUnaligned(as: UInt32.self)
+                    p += 4
+                    let nameRef = p.loadUnaligned(as: attrreference_t.self)
+                    let namePtr = (p + Int(nameRef.attr_dataoffset)).assumingMemoryBound(to: CChar.self)
+                    p += MemoryLayout<attrreference_t>.size
+                    let objType = p.loadUnaligned(as: UInt32.self)
+                    p += 4
+                    entry += length
+                    guard error == 0, returned.commonattr & cmnName != 0 else { continue }
+                    if objType == vDir {
+                        u.folders += 1
+                        stack.append(dir == "/" ? "/" + String(cString: namePtr) : dir + "/" + String(cString: namePtr))
+                        continue
+                    }
+                    u.files += 1
+                    if returned.fileattr & fileTotalSize != 0 { u.bytes += max(0, p.loadUnaligned(as: Int64.self)) }
+                    p += 8
+                    if returned.fileattr & fileAllocSize != 0 { u.allocated += max(0, p.loadUnaligned(as: Int64.self)) }
                 }
             }
+            if !supported { addFallbackUsage(dir, into: &u, stack: &stack) }
+            if let progress, ProcessInfo.processInfo.systemUptime - reported > 0.25 {
+                reported = ProcessInfo.processInfo.systemUptime
+                progress(u)
+            }
         }
-        return (bytes, files)
+        return u
+    }
+
+    /// FileManager for 1 folder, for file systems without getattrlistbulk.
+    private static func addFallbackUsage(_ dir: String, into u: inout Usage, stack: inout [String]) {
+        let keys: [URLResourceKey] = [.isDirectoryKey, .isSymbolicLinkKey, .totalFileSizeKey, .totalFileAllocatedSizeKey]
+        guard let urls = try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: dir), includingPropertiesForKeys: keys) else { return }
+        for url in urls {
+            let v = try? url.resourceValues(forKeys: Set(keys))
+            if v?.isDirectory == true, v?.isSymbolicLink != true {
+                u.folders += 1
+                stack.append(url.path)
+                continue
+            }
+            u.files += 1
+            u.bytes += Int64(v?.totalFileSize ?? 0)
+            u.allocated += Int64(v?.totalFileAllocatedSize ?? 0)
+        }
     }
 }

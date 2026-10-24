@@ -106,6 +106,11 @@ final class QAHarness {
             record(step, ["path": wc.activePane.path])
             done()
 
+        case "infoClose":
+            InfoPanel.shared.close()
+            record(step)
+            done()
+
         case "command":
             let ok = wc.perform(step["id"] as? String ?? "", args: step["args"] as? String)
             record(step, ok: ok)
@@ -451,7 +456,7 @@ final class QAHarness {
         return ["widths": widths, "path": p.path, "selected": names(p.selectedItems), "visible": p.folderModel.visible.count,
                 "query": p.folderModel.query, "view": p.tab.view.rawValue, "activePane": wc.activePaneIndex,
                 "dual": wc.dualPane, "tabs": p.tabs.count, "count": p.countLabel.stringValue, "status": wc.toast.text,
-                "favourites": wc.sidebar.favouritesOutline]
+                "favourites": wc.sidebar.favouritesOutline, "info": InfoPanel.shared.shownText]
     }
 
     private func check(_ step: [String: Any]) -> Bool {
@@ -513,6 +518,7 @@ final class QAHarness {
             ok = ok && (fits || tight)
         }
         if let s = step["statusContains"] as? String { ok = ok && wc.toast.text.contains(s) }
+        if let s = step["infoContains"] as? [String] { ok = ok && s.allSatisfy { InfoPanel.shared.shownText.contains($0) } }
         if let s = step["countContains"] as? [String] { ok = ok && s.allSatisfy { p.countLabel.stringValue.contains($0) } }
         if let s = step["stack"] as? Int { ok = ok && AppDelegate.shared.state.dropStack.count == s }
         if let n = step["transferRows"] as? Int { ok = ok && wc.transfers.rows.count == n && (n == 0 || wc.transfers.frame.height > 50) }

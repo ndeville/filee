@@ -82,6 +82,18 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(r.files, 2)
     }
 
+    func testUsage() throws {
+        touch("u/a", String(repeating: "a", count: 100))
+        touch("u/b/c", String(repeating: "a", count: 5000))
+        touch("u/b/d/e", "e")
+        try fm.createSymbolicLink(atPath: path("u/link"), withDestinationPath: path("u/b"))
+        let u = DirectoryLister.usage(path("u"))
+        XCTAssertEqual(u.files, 4)
+        XCTAssertEqual(u.folders, 2)
+        XCTAssertGreaterThanOrEqual(u.bytes, 5101)
+        XCTAssertGreaterThanOrEqual(u.allocated, 3 * 4096)
+    }
+
     // MARK: Formatting
 
     func testFormatSize() {

@@ -67,6 +67,7 @@ cd FileeCore && swift test
 - App icons always carry Nic's logo (the NicAI edelweiss). Icons follow the NicAI app icon layout (full canvas, name under the art: see the nicai-design skill). Edit `assets/AppIcon-art.svg` and regenerate; the options and their generator are in `output/261010-app-icon-options/`.
 - ⌘H goes to the home folder, not Hide Filee (Nic's choice, 13th October 2026): the Hide menu item has no key.
 - ⌘↓ selects the last item (Nic's choice, 14th October 2026), not Open: ↩ and ⌘O open.
+- ⌘I is Get Info (Nic, 24th October 2026). ⌃⌘I, the old key, still works.
 - ⌥⌘↑ shows the enclosing folder in the other pane (Nic, 15th October 2026). ⌥⌘← and ⌥⌘→ stay Collapse All and Expand All.
 - ⌘0 resets the zoom to the default size (`fontSize`, 14 pt). ⌘B, not ⌘0, toggles the sidebar. Tab names use the file list font and zoom with it.
 - Nic's global App Shortcuts: ⇧⌘F is Find, ⌥⌘F is Bring All to Front. Filee has neither menu item, so the key map gets both.

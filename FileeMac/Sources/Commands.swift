@@ -73,7 +73,7 @@ enum CommandCatalog {
         .init(id: "zoomOut", title: "Zoom Out", key: "cmd+-", args: nil),
         .init(id: "zoomReset", title: "Reset Zoom", key: "cmd+0", args: nil),
         .init(id: "quickLook", title: "Quick Look", key: "space", args: nil),
-        .init(id: "info", title: "Get Info", key: "ctrl+cmd+i", args: nil),
+        .init(id: "info", title: "Get Info", key: "cmd+i", args: nil),
         .init(id: "folderSizes", title: "Calculate Folder Sizes", key: "ctrl+cmd+s", args: nil),
         .init(id: "expandAll", title: "Expand All", key: "alt+cmd+right", args: nil),
         .init(id: "collapseAll", title: "Collapse All", key: "alt+cmd+left", args: nil),
@@ -128,6 +128,8 @@ enum CommandCatalog {
             let chords = key.split(separator: " ").compactMap { KeyChord(String($0)) }
             return KeyBinding(chords: chords, command: c.id, args: c.args)
         }
+        // ⌃⌘I, the old Get Info key, still works.
+        if let old = KeyChord("ctrl+cmd+i") { out.append(KeyBinding(chords: [old], command: "info", args: nil)) }
         // Jumps from settings.json: ⌘J then the letter.
         for (letter, path) in Theme.settings.jumps.sorted(by: { $0.key < $1.key }) {
             if let a = KeyChord("cmd+j"), let b = KeyChord(letter.lowercased()) {

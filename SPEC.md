@@ -172,7 +172,7 @@ Path Finder keys are kept wherever Nic set one (decision 15).
 | ⇧⌘N        | New folder, next to the selected item  | ⌥⌘N        | New text file                         |
 | ⌘⌫         | Move to Trash                          | ⇧⌘⌫        | Empty Trash (confirm)                 |
 | ⌘Z / ⇧⌘Z   | Undo / redo                            | ⌘E         | Eject volume                          |
-| Space      | Quick Look                             | ⌃⌘I        | Get Info                              |
+| Space      | Quick Look                             | ⌘I         | Get Info (⌃⌘I also works)             |
 | ⇧⌘I        | Show invisible files                   | ⇧⌘R        | Reload                                |
 | ⌥⌘F / ⇧⌥⌘F | Keyboard to Favourites / Volumes       | ⌥⌘R        | Reveal in Finder                      |
 | ⌃⌘T        | Open Ghostty here                      | ⌃⌘D        | Add selection to drop stack           |
@@ -260,7 +260,7 @@ Default actions at first launch, as examples: open in TextEdit, compare 2 files 
 
 ### 5.5 Other file features
 
-- Get Info (⌃⌘I): path, size (folders computed), item count, dates (created, modified, added), kind, image dimensions, media duration. A panel, not a window per file.
+- Get Info (⌘I, and ⌃⌘I): kind, where, size and size on disk (folders walked in the background, with totals "so far" every 0.25 s), files and folders inside, dates (created, modified, added, last opened), image dimensions, camera and date taken, video resolution, frame rate and codec, media duration, PDF pages, app version, the app that opens the file, tags, where a download came from, permissions, Locked and Hidden flags, the symlink target, and the volume with its free space. The main thread shows only what the listing and 1 stat give; the rest loads in the background, and a new Get Info cancels the walk of the previous one. A panel, not a window per file.
 - Folder sizes (⌃⌘S): computes the size of every folder in the listing in the background and fills the size column. Cached until the folder changes.
 - Open in: Ghostty at the folder (⌃⌘T), Notee for `.md`, CotEditor for text, default app otherwise.
 - Copy path variants in the palette: full path, `~` path, name, Markdown link.
