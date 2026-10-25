@@ -24,6 +24,7 @@ public struct FavouriteNode: Equatable, Sendable {
 /// Favourites as a tree from the root (SPEC 6): each favourite sits under the closest favourite that contains it.
 /// A folder that isn't a favourite but holds 2 or more of them becomes a branch ("Dropbox"); a chain of such folders
 /// with 1 branch inside shows as 1 row ("Dropbox/Work", or "…/T/filee-qa" past 2 folders). Siblings sort by path.
+/// Foldee's strip draws the same tree from a copy (foldee/FoldeeCore/FavouriteTree.swift): keep the 2 in step.
 public enum FavouriteTree {
     public static func build(_ favourites: [(name: String, path: String)], home: String) -> [FavouriteNode] {
         var seen = Set<String>()
