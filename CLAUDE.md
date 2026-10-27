@@ -66,7 +66,8 @@ cd FileeCore && swift test
 - Nic's builds sign with his Developer ID (from `.private/signing.env`), hardened runtime, bundle id `com.nicolasdeville.filee`. A stable signature keeps the Files and Folders and Full Disk Access grants across rebuilds. If `build.sh` warns "ad-hoc signature" on Nic's Mac, stop: `.private/signing.env` is missing.
 - App icons always carry Nic's logo (the NicAI edelweiss). Icons follow the NicAI app icon layout (full canvas, name under the art: see the nicai-design skill). Edit `assets/AppIcon-art.svg` and regenerate; the options and their generator are in `output/261010-app-icon-options/`.
 - ⌘H goes to the home folder, not Hide Filee (Nic's choice, 13th October 2026): the Hide menu item has no key.
-- ⌘↓ selects the last item (Nic's choice, 14th October 2026), not Open: ↩ and ⌘O open.
+- ⌘↓ selects the last item (Nic's choice, 14th October 2026), not Open: ↩ opens.
+- ⌘O opens the path bar, like ⌘L and ⌘G (Nic, 27th October 2026): a folder path opens the folder, a file path selects the file in its folder. ↩ alone opens the selection.
 - ⌘I is Get Info (Nic, 24th October 2026). ⌃⌘I, the old key, still works.
 - ⌥⌘↑ shows the enclosing folder in the other pane (Nic, 15th October 2026). ⌥⌘← and ⌥⌘→ stay Collapse All and Expand All.
 - ⌘0 resets the zoom to the default size (`fontSize`, 14 pt). ⌘B, not ⌘0, toggles the sidebar. Tab names use the file list font and zoom with it.

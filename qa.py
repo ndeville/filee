@@ -114,6 +114,16 @@ def suites(fx: dict) -> dict:
             {"op": "key", "keys": "cmd+g"},
             {"op": "expect", "label": "cmd+g opens the path bar", "pathEditing": True},
             {"op": "key", "keys": "escape"},
+            {"op": "key", "keys": "cmd+o"},
+            {"op": "expect", "label": "cmd+o opens the path bar", "pathEditing": True},
+            {"op": "pastePath", "pane": 0, "text": A + "/sub/deeper"},
+            {"op": "key", "keys": "enter"},
+            {"op": "expect", "label": "cmd+o, a folder path: opens the folder", "path": A + "/sub/deeper", "pathEditing": False},
+            {"op": "key", "keys": "cmd+o"},
+            {"op": "pastePath", "pane": 0, "text": A + "/beta.md"},
+            {"op": "key", "keys": "enter"},
+            {"op": "expect", "label": "cmd+o, a file path: opens its folder and selects the file",
+             "path": A, "selected": ["beta.md"], "pathEditing": False},
             {"op": "key", "keys": "cmd+b"},
             {"op": "expect", "label": "cmd+b hides the sidebar", "sidebar": False},
             {"op": "key", "keys": "cmd+b"},
@@ -628,7 +638,8 @@ def suite_cli() -> int:
         rc, s = j(["status"])
         if s and s.get("selection_count") == 2:
             rc2, sel = j(["selection"])
-            seen_selection = bool(sel and [Path(p).name for p in sel["paths"]] == ["alpha.txt", "beta.md"])
+            # A read can land mid-write of live.json: 1 good read is enough, a later bad one doesn't undo it.
+            seen_selection = seen_selection or bool(sel and [Path(p).name for p in sel["paths"]] == ["alpha.txt", "beta.md"])
         try:
             state = json.loads(live.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):

@@ -62,7 +62,7 @@ This is personal software. It does what I need on my Mac. I don't offer support,
 - **Readable dates:** "today 14:05", "yesterday", "3 days ago", then `2026-10-08 14:05`.
 - **New today:** a red dot marks every file added to its folder today. The dots reset at midnight.
 - **A path you can click and drop on.** Each folder from your home folder down is a button: a click goes there, and a file dropped on it moves or copies there.
-- **A path bar that takes anything.** ⌘L or ⌘G opens it, ready for a paste. It accepts quotes, `file://` URLs and shell escapes, and completes with Tab. A file path opens its folder and selects the file.
+- **A path bar that takes anything.** ⌘O, ⌘L or ⌘G opens it, ready for a paste. It accepts quotes, `file://` URLs and shell escapes, and completes with Tab. A file path opens its folder and selects the file.
 - **Folder sizes** for every folder in the listing (⌃⌘S), computed in the background.
 - **Get Info** in 1 panel (⌘I): size and size on disk (folders included), files and folders inside, dates, kind, the app that opens it, where a download came from, tags, permissions, image, video and PDF details, and the free space on its volume.
 - **Quick Look** with Space, invisible files with ⇧⌘I, and a second window with ⌘N.
@@ -226,7 +226,7 @@ Filee's own **Reveal in Finder** still opens Finder: it asks Finder directly (ma
 | -               | -                                    | -             | -                             |
 | Type letters    | Filter the folder (Esc clears)       | ⌘K            | Command palette               |
 | ↩               | Open                                 | ⌘↑ / ⌘↓       | Enclosing folder / last item  |
-| Tab             | Switch pane                          | ⌘G or ⌘L      | Type or paste a path          |
+| Tab             | Switch pane                          | ⌘O, ⌘G or ⌘L  | Type or paste a path          |
 | ⌘1 / ⌘2 / F1    | Single / dual / toggle               | ⌘3 ⌘4 ⌘5      | Thumbnails / columns / list   |
 | ⌘C / ⌘X / ⌘V    | Copy / cut / paste files             | F5 / F6       | Copy / move to the other pane |
 | ⌘R              | Rename (several: batch rename)       | ⇧⌘N           | New folder                    |

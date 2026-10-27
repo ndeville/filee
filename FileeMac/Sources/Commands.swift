@@ -13,7 +13,6 @@ enum CommandCatalog {
     static let all: [Entry] = [
         // Navigation
         .init(id: "open", title: "Open", key: "enter", args: nil),
-        .init(id: "open", title: "Open", key: "cmd+o", args: nil),
         .init(id: "openWith", title: "Open With…", key: nil, args: nil),
         .init(id: "up", title: "Enclosing Folder", key: "cmd+up", args: nil),
         .init(id: "selectLast", title: "Select Last Item", key: "cmd+down", args: nil),
@@ -23,6 +22,7 @@ enum CommandCatalog {
         .init(id: "editPath", title: "Go to Folder (Edit Path)", key: "cmd+l", args: nil),
         .init(id: "editPath", title: "Go to Folder (Edit Path)", key: "ctrl+g", args: nil),
         .init(id: "editPath", title: "Go to Folder (Edit Path)", key: "cmd+g", args: nil),
+        .init(id: "editPath", title: "Go to Folder (Edit Path)", key: "cmd+o", args: nil),
         .init(id: "palette", title: "Command Palette", key: "cmd+k", args: nil),
         .init(id: "go", title: "Go to Home", key: "cmd+h", args: "~"),
         .init(id: "go", title: "Go to Downloads", key: "alt+cmd+d", args: "~/Downloads"),
