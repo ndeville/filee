@@ -264,7 +264,8 @@ Default actions at first launch, as examples: open in TextEdit, compare 2 files 
 - Folder sizes (⌃⌘S): computes the size of every folder in the listing in the background and fills the size column. Cached until the folder changes.
 - Open in: Ghostty at the folder (⌃⌘T), Notee for `.md`, CotEditor for text, default app otherwise.
 - Copy path variants in the palette: full path, `~` path, name, Markdown link.
-- Reveal in Finder (⌥⌘R, context menu, sidebar) sends Finder an Apple Event (`reveal`, then `activate`). `NSWorkspace.activateFileViewerSelecting` would go to the app in `NSFileViewer`, which can be Filee itself.
+- Reveal in Finder (⌥⌘R, context menu, sidebar) sends Finder an Apple Event (`reveal`, then `activate`). `NSWorkspace.activateFileViewerSelecting` would go to the app in `NSFileViewer`, which can be Filee itself. Before the event, Filee writes `last_action` `revealInFinder` (with `epoch`) to `live.json`, so a script that sends new Finder windows to Filee can leave this one open.
+- Open With (context menu) is a submenu: the default app first, then the other apps A to Z, each with its icon, 1 entry per app (a 2nd copy with the same bundle id is left out), then Other… (any app in /Applications). It fills itself when it opens, so a right-click doesn't pay for the lookup. The Open With command (palette) shows the same menu next to the file.
 
 ---
 

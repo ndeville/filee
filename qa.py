@@ -164,6 +164,8 @@ def suites(fx: dict) -> dict:
             {"op": "expect", "label": "ctrl+cmd+i still opens Get Info: an image's size on disk and dimensions",
              "infoContains": ["IMG01.png", "On disk\t", "Dimensions\t64 × 48 px"]},
             {"op": "infoClose"},
+            {"op": "expect", "label": "right-click Open With: a submenu, default app first, 1 entry per app with its icon",
+             "openWithMenu": True},
             {"op": "select", "names": ["sub"]},
             {"op": "key", "keys": "enter"},
             {"op": "expect", "label": "Enter opens a folder", "path": A + "/sub"},

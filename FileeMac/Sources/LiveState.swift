@@ -21,8 +21,15 @@ enum LiveState {
     }
 
     static func record(action: String, rid: String?, ok: Bool) {
-        lastAction = ["name": action, "rid": rid ?? "", "ok": ok, "at": iso(Date())]
+        lastAction = ["name": action, "rid": rid ?? "", "ok": ok, "at": iso(Date()), "epoch": Date().timeIntervalSince1970]
         publish()
+    }
+
+    /// Reveal in Finder: written before Finder opens its window, so a script that sends new Finder windows to Filee
+    /// (Hammerspoon on Nic's Mac) can see that Filee asked for this one and leave it alone.
+    static func recordNow(action: String) {
+        lastAction = ["name": action, "rid": "", "ok": true, "at": iso(Date()), "epoch": Date().timeIntervalSince1970]
+        write(now: true)
     }
 
     /// Ask for a write. Many changes in 1 turn make 1 write.
@@ -35,7 +42,7 @@ enum LiveState {
         }
     }
 
-    private static func write() {
+    private static func write(now: Bool = false) {
         guard let app = AppDelegate.shared else { return }
         var state: [String: Any] = [
             "pid": Int(getpid()),
@@ -63,11 +70,12 @@ enum LiveState {
         }
         if let lastAction { state["last_action"] = lastAction }
         let target = app.config.home.appendingPathComponent("run/live.json")
-        queue.async {
+        let save = {
             guard let data = try? JSONSerialization.data(withJSONObject: state, options: [.prettyPrinted, .sortedKeys]) else { return }
             try? FileManager.default.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true,
                                                      attributes: [.posixPermissions: 0o700])
             try? data.write(to: target, options: .atomic)
         }
+        if now { queue.sync(execute: save) } else { queue.async(execute: save) }
     }
 }

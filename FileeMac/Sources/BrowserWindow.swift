@@ -1,6 +1,7 @@
 import AppKit
 import FileeCore
 import Quartz
+import UniformTypeIdentifiers
 
 /// Lays out the window by hand (Notee's lesson: no auto layout at the top level).
 final class RootView: FlippedView {
@@ -568,22 +569,31 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         NSWorkspace.shared.open([URL(fileURLWithPath: folder)], withApplicationAt: url, configuration: cfg)
     }
 
+    /// The Open With command (palette, menu bar): the same list as the context menu's submenu, at the first file's row.
     private func openWith() {
-        let sel = activePane.selectedItems.filter { !$0.isFolder }
-        guard let first = sel.first else { return }
-        let apps = NSWorkspace.shared.urlsForApplications(toOpen: first.url)
-        let menu = NSMenu()
-        for app in apps.prefix(20) {
-            let name = FileManager.default.displayName(atPath: app.path)
-            menu.addItem(ClosureMenuItem(title: name) {
-                NSWorkspace.shared.open(sel.map(\.url), withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
-            })
+        let files = activePane.selectedItems.filter { !$0.isFolder }
+        guard let first = files.first, let window, let content = window.contentView else { return }
+        let menu = OpenWithMenu(files: files.map(\.url), browser: self)
+        menu.menuNeedsUpdate(menu)
+        var at = NSPoint(x: 200, y: content.bounds.midY)
+        if let frame = activePane.fileView.screenFrame(of: first.path) {
+            at = content.convert(window.convertPoint(fromScreen: NSPoint(x: frame.maxX, y: frame.minY)), from: nil)
         }
-        if let frame = activePane.fileView.screenFrame(of: first.path), let window {
-            let p = window.convertPoint(fromScreen: frame.origin)
-            menu.popUp(positioning: nil, at: p, in: window.contentView)
-        } else {
-            menu.popUp(positioning: nil, at: NSPoint(x: 200, y: 200), in: window?.contentView)
+        // With an item to position, AppKit keeps the menu on screen next to the row.
+        menu.popUp(positioning: menu.items.first, at: at, in: content)
+    }
+
+    /// Other… in Open With: any app, chosen in /Applications.
+    func openWithOtherApp(_ files: [URL]) {
+        let panel = NSOpenPanel()
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        panel.allowedContentTypes = [.application]
+        panel.prompt = "Open"
+        panel.message = "Open \(files.count == 1 ? "“\(files[0].lastPathComponent)”" : Format.items(files.count)) with:"
+        guard let window else { return }
+        panel.beginSheetModal(for: window) { r in
+            guard r == .OK, let app = panel.url else { return }
+            NSWorkspace.shared.open(files, withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
         }
     }
 
@@ -649,6 +659,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     /// which can be Filee (SPEC 5.5).
     func revealInFinder(_ paths: [String]) {
         let items = paths.map { "POSIX file \"\($0.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\""))\"" }
+        LiveState.recordNow(action: "revealInFinder")
         let source = "tell application \"Finder\"\nreveal {\(items.joined(separator: ", "))}\nactivate\nend tell"
         var error: NSDictionary?
         NSAppleScript(source: source)?.executeAndReturnError(&error)
@@ -773,7 +784,12 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
             return menu
         }
         add("Open", "open")
-        if items.contains(where: { !$0.isFolder }) { add("Open With…", "openWith") }
+        let files = items.filter { !$0.isFolder }
+        if !files.isEmpty {
+            let it = NSMenuItem(title: "Open With", action: nil, keyEquivalent: "")
+            it.submenu = OpenWithMenu(files: files.map(\.url), browser: self)
+            menu.addItem(it)
+        }
         add("Quick Look", "quickLook")
         add("Get Info", "info")
         menu.addItem(.separator())
@@ -842,5 +858,65 @@ extension PaneController {
 enum Clipboard {
     static var board: NSPasteboard {
         ProcessInfo.processInfo.environment["FILEE_QA"] != nil ? NSPasteboard(name: .init("com.nicolasdeville.filee.qa")) : .general
+    }
+}
+
+/// Open With: the apps that can open the first file, the default app first, then A to Z, each with its icon. 1 entry per
+/// app: a 2nd copy of the same app (same bundle id) is left out. The menu fills itself when it opens, so a right-click
+/// doesn't pay for the Launch Services lookup and the icons.
+final class OpenWithMenu: NSMenu, NSMenuDelegate {
+    private let files: [URL]
+    private weak var browser: BrowserWindowController?
+    private var filled = false
+
+    init(files: [URL], browser: BrowserWindowController) {
+        self.files = files
+        self.browser = browser
+        super.init(title: "Open With")
+        delegate = self
+        // A submenu shows its arrow only when it has an item.
+        addItem(NSMenuItem(title: "…", action: nil, keyEquivalent: ""))
+    }
+
+    required init(coder: NSCoder) { fatalError() }
+
+    /// The apps for a file, default first, 1 per bundle id.
+    static func apps(for file: URL) -> (apps: [URL], defaultApp: URL?) {
+        let ws = NSWorkspace.shared
+        let defaultApp = ws.urlForApplication(toOpen: file)
+        var seen = Set<String>()
+        var apps: [URL] = []
+        for app in [defaultApp].compactMap({ $0 }) + ws.urlsForApplications(toOpen: file) {
+            let id = Bundle(url: app)?.bundleIdentifier ?? app.path
+            if seen.insert(id).inserted { apps.append(app) }
+        }
+        let rest = apps.dropFirst(defaultApp == nil ? 0 : 1).sorted { name($0).localizedCaseInsensitiveCompare(name($1)) == .orderedAscending }
+        return ((defaultApp == nil ? [] : [apps[0]]) + rest, defaultApp)
+    }
+
+    static func name(_ app: URL) -> String {
+        let n = FileManager.default.displayName(atPath: app.path)
+        return n.hasSuffix(".app") ? String(n.dropLast(4)) : n
+    }
+
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        guard !filled, let first = files.first else { return }
+        filled = true
+        removeAllItems()
+        let (apps, defaultApp) = Self.apps(for: first)
+        let files = files
+        for app in apps {
+            let title = app == defaultApp ? "\(Self.name(app)) (default)" : Self.name(app)
+            let item = ClosureMenuItem(title: title) {
+                NSWorkspace.shared.open(files, withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
+            }
+            item.image = Icons.small(NSWorkspace.shared.icon(forFile: app.path), px: 32)
+            item.representedObject = app
+            addItem(item)
+            if app == defaultApp && apps.count > 1 { addItem(.separator()) }
+        }
+        if apps.isEmpty { addItem(NSMenuItem(title: "No app found", action: nil, keyEquivalent: "")) }
+        addItem(.separator())
+        addItem(ClosureMenuItem(title: "Other…") { [weak browser] in browser?.openWithOtherApp(files) })
     }
 }

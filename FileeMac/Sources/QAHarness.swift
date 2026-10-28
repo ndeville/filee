@@ -519,6 +519,20 @@ final class QAHarness {
         }
         if let s = step["statusContains"] as? String { ok = ok && wc.toast.text.contains(s) }
         if let s = step["infoContains"] as? [String] { ok = ok && s.allSatisfy { InfoPanel.shared.shownText.contains($0) } }
+        if step["openWithMenu"] as? Bool == true {
+            // The context menu's Open With submenu: the default app first, each app once and with its icon, then Other….
+            let menu = wc.contextMenu(for: p.selectedItems, in: p)
+            if let sub = menu.items.first(where: { $0.title == "Open With" })?.submenu as? OpenWithMenu, let first = p.selectedItems.first {
+                sub.menuNeedsUpdate(sub)
+                let apps = sub.items.compactMap { $0.representedObject as? URL }
+                let ids = apps.map { Bundle(url: $0)?.bundleIdentifier ?? $0.path }
+                ok = ok && !apps.isEmpty && apps.first == NSWorkspace.shared.urlForApplication(toOpen: first.url)
+                    && sub.items.first?.title.hasSuffix("(default)") == true && Set(ids).count == ids.count
+                    && sub.items.filter { $0.representedObject is URL }.allSatisfy { $0.image != nil } && sub.items.last?.title == "Other…"
+            } else {
+                ok = false
+            }
+        }
         if let s = step["countContains"] as? [String] { ok = ok && s.allSatisfy { p.countLabel.stringValue.contains($0) } }
         if let s = step["stack"] as? Int { ok = ok && AppDelegate.shared.state.dropStack.count == s }
         if let n = step["transferRows"] as? Int { ok = ok && wc.transfers.rows.count == n && (n == 0 || wc.transfers.frame.height > 50) }
