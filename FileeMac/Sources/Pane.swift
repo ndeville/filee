@@ -40,6 +40,8 @@ final class TabStrip: FlippedView {
 
     override init(frame: NSRect) {
         super.init(frame: frame)
+        // More tabs than room: they stop at the strip's edge instead of drawing under the type filter.
+        clipsToBounds = true
         plus.target = self
         addSubview(plus)
     }
@@ -58,8 +60,20 @@ final class TabStrip: FlippedView {
     }
 
     private func rebuild() {
+        // Layer colours resolve with the current appearance: outside a draw that is the Mac's, not Filee's pinned theme
+        // (light Filee on a dark Mac drew the active tab as a dark pill with black text).
+        effectiveAppearance.performAsCurrentDrawingAppearance { rebuildButtons() }
+    }
+
+    /// A theme switch reaches this view after the window's: the tab colours resolve again here, with the new appearance.
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        rebuild()
+    }
+
+    private func rebuildButtons() {
         buttons.forEach { $0.removeFromSuperview() }
-        buttons = titles.enumerated().map { i, t in
+        buttons = titles.map(\.singleLine).enumerated().map { i, t in
             let b = NSButton(title: t, target: self, action: #selector(clicked(_:)))
             b.tag = i
             b.isBordered = false
@@ -71,7 +85,7 @@ final class TabStrip: FlippedView {
                 .font: Theme.listFont(bold: isActive),
                 .foregroundColor: isActive ? Theme.fg : Theme.muted,
             ])
-            b.toolTip = "Click: show. ⌥-click: close."
+            b.toolTip = "\(t)\nClick: show. ⌥-click: close."
             addSubview(b)
             return b
         }
@@ -196,7 +210,8 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
         let tabH = Theme.tabHeight, pathH = max(26, (Theme.listSize * 1.85).rounded()), accentH: CGFloat = 3
         accentBar.frame = NSRect(x: 0, y: 0, width: b.width, height: accentH)
         // The type filter sits right of the tabs; a narrow pane keeps the room for its tabs.
-        typeBar.isHidden = b.width < 420
+        // It also steps aside when it would leave the tabs too little room: at the largest zoom it covered every tab but 1.
+        typeBar.isHidden = b.width < 420 || b.width - typeBar.width - 10 < max(200, Theme.listSize * 12)
         let typeW = typeBar.isHidden ? 0 : typeBar.width + 10
         typeBar.frame = NSRect(x: b.width - typeW, y: accentH, width: typeBar.width, height: tabH)
         tabStrip.frame = NSRect(x: 0, y: accentH, width: b.width - typeW, height: tabH)
@@ -252,7 +267,7 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
         var parts: [String] = []
         if m.types != .all { parts.append(m.types.title) }
         if !m.query.isEmpty {
-            parts.append("\(m.visible.count) of \(m.unfilteredCount)")
+            parts.append("\(m.visible.count.formatted()) of \(m.unfilteredCount.formatted())")
         } else if contents.folders + contents.files == 0 {
             parts.append("0 items")
         } else {
@@ -392,6 +407,9 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
         } else {
             messageLabel.isHidden = true
         }
+        // An empty folder, an unreadable one or a filter with no match changes no selection, so AppKit sends no
+        // notice: the status bar kept the last folder's selection ("34 selected").
+        if fileView.selectedItems.isEmpty { window.selectionChanged(in: self) }
         updateFilterBar()
         countContents()
         updateCount()
@@ -598,7 +616,7 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
         let hidden = q.isEmpty
         // Spaces would be invisible: show them as a middle dot.
         filterLabel.stringValue = q.replacingOccurrences(of: " ", with: "·")
-        filterHint.stringValue = hidden ? "" : "\(folderModel.visible.count) of \(folderModel.unfilteredCount)   ·   Esc clears   ·   ⌫ deletes"
+        filterHint.stringValue = hidden ? "" : "\(folderModel.visible.count.formatted()) of \(folderModel.unfilteredCount.formatted())   ·   Esc clears   ·   ⌫ deletes"
         if filterBar.isHidden != hidden {
             filterBar.isHidden = hidden
             layout()

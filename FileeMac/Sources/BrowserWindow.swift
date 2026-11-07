@@ -29,6 +29,7 @@ final class StatusBar: FlippedView {
         wantsLayer = true
         layer?.backgroundColor = Theme.surface.cgColor
         left.lineBreakMode = .byTruncatingTail
+        left.allowsExpansionToolTips = true
         for v in [left, themeButton] { addSubview(v) }
     }
 
@@ -234,7 +235,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
 
     func updateTitle() {
         window?.title = activePane.folderModel.displayPath
-        titleBar.path.stringValue = activePane.folderModel.displayPath
+        titleBar.path.stringValue = activePane.folderModel.displayPath.singleLine
         titleBar.needsLayout = true
         window?.representedURL = URL(fileURLWithPath: activePane.path)
     }
@@ -248,9 +249,9 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         } else {
             let bytes = sel.reduce(Int64(0)) { $0 + max(0, pane.folderModel.size(of: $1)) }
             let folders = sel.filter(\.isFolder).count
-            var text = sel.count == 1 ? sel[0].name : "\(sel.count) selected"
+            var text = sel.count == 1 ? sel[0].name.singleLine : "\(sel.count.formatted()) selected"
             if bytes > 0 { text += " · \(Format.size(bytes))" }
-            if folders > 0, sel.count > 1 { text += " · \(folders) folder\(folders == 1 ? "" : "s")" }
+            if folders > 0, sel.count > 1 { text += " · \(folders.formatted()) folder\(folders == 1 ? "" : "s")" }
             statusBar.left.stringValue = text
         }
         if QLPreviewPanel.sharedPreviewPanelExists(), QLPreviewPanel.shared().isVisible {

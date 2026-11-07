@@ -48,7 +48,8 @@ inside it (`Icons.folderIconFiles`); a volume's logo comes from `volumeIcons` in
 ./build.sh                # Release build into build/Filee.app, signed with FILEE_SIGN_IDENTITY (ad hoc without)
 ./build.sh --install      # also copy it to /Applications/Filee.app (quits a running Filee first)
 ./build.sh --test         # run the FileeCore unit tests first
-python3 qa.py             # all QA suites (about 1 min); python3 qa.py --only ops
+python3 qa.py             # all QA suites (about 2 min); python3 qa.py --only ops
+python3 qa.py --only worst # worst-case data: 255-byte, emoji, RTL, NFD and newline names, 2 TB, 1970/2040, loops, 50,000 files
 python3 screenshots.py    # README screenshots, light and dark (about 2 min, the window comes to the front)
 cd FileeCore && swift test
 ```
@@ -122,6 +123,11 @@ filee tabs --json                     # every pane's tabs
   swapping the theme frame's class crashes (NSDynamicProperties). Every Filee window and panel must use these 2 classes.
 - SMB shares report 0 for `volumeAvailableCapacityForImportantUsage` and have no Trash (`trashItem` throws `CocoaError.featureUnsupported`).
   Free space falls back to `volumeAvailableCapacity` (`URL.volumeFreeSpace`); Move to Trash asks before it deletes for good.
+- List and column icons go through `Icons.small` (64 px bitmaps); only thumbnails ask for the raw icon (`large: true`). A folder
+  with apps, libraries and many file kinds cost 60 MB in decoded raw icons (worst suite, 7th November 2026).
+- Layer colours set outside `draw` resolve with the Mac's appearance, not Filee's pinned theme: resolve them inside
+  `effectiveAppearance.performAsCurrentDrawingAppearance` and again in `viewDidChangeEffectiveAppearance` (`TabStrip`).
+- A name can hold a line break: 1-line labels show `name.singleLine` (⏎), never the raw name.
 - `reloadData` in the list loses the selection: `Pane.styleChanged` selects the same paths again (zoom, settings.json).
 
 ## Facts

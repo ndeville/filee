@@ -288,7 +288,7 @@ final class SidebarController: NSObject, NSOutlineViewDataSource, NSOutlineViewD
             v.icon.contentTintColor = style.logo == nil ? style.color : nil
         } else {
             switch row.kind {
-            case .stack: v.icon.image = NSWorkspace.shared.icon(forFile: row.path)
+            case .stack: v.icon.image = Icons.small(NSWorkspace.shared.icon(forFile: row.path))
             case .recent: v.icon.image = Icons.symbol("clock")
             case .favourite: v.icon.image = Icons.symbol(row.path == NSHomeDirectory() ? "house" : "folder")
             case .branch, .volume: v.icon.image = Icons.symbol("folder")
@@ -300,7 +300,7 @@ final class SidebarController: NSObject, NSOutlineViewDataSource, NSOutlineViewD
                 v.icon.contentTintColor = nil
             }
         }
-        v.name.stringValue = row.name
+        v.name.stringValue = row.name.singleLine
         if row.kind == .branch {
             v.name.textColor = Theme.muted
             // A logo (Dropbox) stays in full colour.

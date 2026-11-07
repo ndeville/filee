@@ -199,14 +199,15 @@ final class ThumbnailsView: NSObject, FileView, NSCollectionViewDataSource, NSCo
         let cell = collectionView.makeItem(withIdentifier: itemID, for: indexPath) as! ThumbItem
         let it = items[indexPath.item]
         cell.path = it.path
-        cell.name.stringValue = it.name
+        cell.name.stringValue = it.name.singleLine
         cell.name.font = Theme.listFont(bold: it.isFolder, size: max(10, Theme.listSize - 1))
         cell.dot.isHidden = !(Theme.settings.newTodayMarker && it.isNew(since: dayStart))
         cell.activePane = activePane
         cell.updateSelection()
         let size = thumbSize
-        if it.isFolder || it.kind == .other {
-            cell.thumb.image = Icons.icon(for: it)
+        // A 0-byte file has nothing to preview: Quick Look drew a blank tile, the type icon says what it is.
+        if it.isFolder || it.kind == .other || (it.kind == .file && it.size == 0) {
+            cell.thumb.image = Icons.icon(for: it, large: true)
         } else {
             let scale = collectionView.window?.backingScaleFactor ?? 2
             if let img = ThumbnailCache.shared.image(for: it, size: size, scale: scale, done: { [weak cell] img in
@@ -214,7 +215,7 @@ final class ThumbnailsView: NSObject, FileView, NSCollectionViewDataSource, NSCo
             }) {
                 cell.thumb.image = img
             } else {
-                cell.thumb.image = Icons.icon(for: it)
+                cell.thumb.image = Icons.icon(for: it, large: true)
             }
         }
         return cell

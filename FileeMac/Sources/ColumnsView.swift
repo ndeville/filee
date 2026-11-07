@@ -242,7 +242,7 @@ final class ColumnsView: NSObject, FileView, NSTableViewDataSource, NSTableViewD
             c.identifier = .init("cell")
             return c
         }()
-        cell.name.stringValue = it.name
+        cell.name.stringValue = it.name.singleLine
         cell.name.font = Theme.listFont(bold: it.isFolder, italic: it.kind == .symlink)
         cell.icon.image = Icons.icon(for: it)
         cell.icon.alphaValue = it.isHidden ? 0.5 : 1

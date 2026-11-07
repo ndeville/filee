@@ -60,14 +60,26 @@ public enum Format {
         if ext.isEmpty { return item.isPackage ? "Package" : "Document" }
         kindLock.lock()
         defer { kindLock.unlock() }
-        if let k = kindCache[ext] { return k }
-        let k = UTType(filenameExtension: ext)?.localizedDescription?.capitalizedFirst ?? ext.uppercased() + " file"
-        kindCache[ext] = k
+        let cacheKey = item.isPackage ? "pkg." + ext : ext
+        if let k = kindCache[cacheKey] { return k }
+        // A package's type conforms to .package, not .data: without it, "photoslibrary" read "PHOTOSLIBRARY file".
+        let type = item.isPackage ? UTType(filenameExtension: ext, conformingTo: .package) : UTType(filenameExtension: ext)
+        let k = type?.localizedDescription?.capitalizedFirst ?? ext.uppercased() + " file"
+        kindCache[cacheKey] = k
         return k
     }
 
     /// "1 item", "12 items".
     public static func items(_ count: Int) -> String { count == 1 ? "1 item" : "\(count.formatted()) items" }
+}
+
+public extension String {
+    /// A name on 1 line: a line break in a file name shows as "⏎" (a name can hold one; a 1-line label would
+    /// draw it as a 2nd line over the next row).
+    var singleLine: String {
+        guard contains(where: \.isNewline) else { return self }
+        return String(map { $0.isNewline ? "⏎" : $0 })
+    }
 }
 
 extension String {

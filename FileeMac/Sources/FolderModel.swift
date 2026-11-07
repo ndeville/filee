@@ -75,9 +75,13 @@ final class FolderModel {
             do {
                 result = try DirectoryLister.list(p)
             } catch let e as POSIXError {
-                err = e.code == .EPERM || e.code == .EACCES
-                    ? "Filee has no access to this folder. Grant it in System Settings > Privacy & Security > Files and Folders, or Full Disk Access."
-                    : (e.code == .ENOENT ? "This folder no longer exists." : e.localizedDescription)
+                // EPERM: macOS privacy (TCC) blocks Filee. EACCES: the folder's own permissions block this user.
+                switch e.code {
+                case .EPERM: err = "Filee has no access to this folder. Grant it in System Settings > Privacy & Security > Files and Folders, or Full Disk Access."
+                case .EACCES: err = "You don't have permission to open this folder. Its permissions block your user: Get Info (⌘I) shows them."
+                case .ENOENT: err = "This folder no longer exists."
+                default: err = e.localizedDescription
+                }
             } catch {
                 err = error.localizedDescription
             }

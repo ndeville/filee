@@ -147,21 +147,25 @@ func iconButton(_ symbol: String, tip: String, target: AnyObject?, action: Selec
 enum Icons {
     private static var cache: [String: NSImage] = [:]
 
-    static func icon(for item: FileItem) -> NSImage {
+    /// The item's icon. The list and columns get a 64 px bitmap (`small`): raw icons decode their large images, and a
+    /// folder with apps, libraries and many file kinds cost 60 MB. `large` (thumbnails, up to 384 px) keeps the raw icon.
+    static func icon(for item: FileItem, large: Bool = false) -> NSImage {
+        let prefix = large ? "L:" : ""
         let key: String
         if item.isFolder {
             key = item.kind == .symlink ? "/link" : "/"
         } else if item.isPackage {
             // Apps carry their own icon.
-            if let img = cache["pkg:" + item.path] { return img }
-            let img = NSWorkspace.shared.icon(forFile: item.path)
-            img.size = NSSize(width: 32, height: 32)
-            if cache.count < 4000 { cache["pkg:" + item.path] = img }
+            if let img = cache[prefix + "pkg:" + item.path] { return img }
+            let raw = NSWorkspace.shared.icon(forFile: item.path)
+            raw.size = NSSize(width: 32, height: 32)
+            let img = large ? raw : small(raw)
+            if cache.count < 4000 { cache[prefix + "pkg:" + item.path] = img }
             return img
         } else {
             key = item.ext
         }
-        if let img = cache[key] { return img }
+        if let img = cache[prefix + key] { return img }
         let img: NSImage
         if item.isFolder {
             img = NSWorkspace.shared.icon(for: .folder)
@@ -171,8 +175,9 @@ enum Icons {
             img = NSWorkspace.shared.icon(for: .data)
         }
         img.size = NSSize(width: 32, height: 32)
-        cache[key] = img
-        return img
+        let out = large ? img : small(img)
+        cache[prefix + key] = out
+        return out
     }
 
     private static var customIcons: [String: NSImage?] = [:]

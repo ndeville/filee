@@ -41,6 +41,8 @@ final class PathCrumbs: NSView {
 
     init() {
         super.init(frame: .zero)
+        // Views don't clip since macOS 14: a current folder wider than the room drew over the pane's count.
+        clipsToBounds = true
         registerForDraggedTypes([.fileURL])
     }
 
@@ -75,7 +77,7 @@ final class PathCrumbs: NSView {
         }
         for name in path.dropFirst(base.count).split(separator: "/") {
             base = (base as NSString).appendingPathComponent(String(name))
-            out.append(Crumb(title: String(name), path: base))
+            out.append(Crumb(title: String(name).singleLine, path: base))
         }
         return out
     }
@@ -117,6 +119,10 @@ final class PathCrumbs: NSView {
         while fold < all.count - 2, total(fold) > bounds.width { fold += 1 }
         folded = fold > 0 ? Array(all[1...fold]) : []
         shown = fold > 0 ? [all[0], ellipsis] + all[(fold + 1)...] : all
+        // Still too wide (a large zoom, a narrow pane): the root keeps its icon and drops its name; its tooltip has the path.
+        if total(fold) > bounds.width, shown.count > 1, shown[0].symbol != nil {
+            shown[0] = Crumb(title: "", path: shown[0].path, symbol: shown[0].symbol)
+        }
         var x: CGFloat = 0
         for i in shown.indices {
             let current = i == shown.count - 1

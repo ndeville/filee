@@ -409,4 +409,15 @@ final class CoreTests: XCTestCase {
         // Every family but "all" has a sample extension of its own.
         for f in FileTypeFilter.allCases where f != .all { XCTAssertTrue(f.extensions.contains(f.sampleExtension ?? "")) }
     }
+
+    /// Worst-case values (qa.py --only worst): a name with a line break, a package's kind, 2 TB.
+    func testWorstCaseFormatting() {
+        XCTAssertEqual("first line\nsecond line.txt".singleLine, "first line⏎second line.txt")
+        XCTAssertEqual("a\r\nb".singleLine, "a⏎b")
+        XCTAssertEqual("🦊 Fox".singleLine, "🦊 Fox")
+        let library = FileItem(name: "Family Photos.photoslibrary", parent: "/tmp", kind: .directory, isPackage: true)
+        XCTAssertFalse(Format.kind(library).contains("PHOTOSLIBRARY"))
+        XCTAssertEqual(Format.size(2 * 1024 * 1024 * 1024 * 1024), "2.00 TB")
+        XCTAssertEqual(Format.date(1).prefix(4), "1970")
+    }
 }

@@ -85,6 +85,8 @@ final class NameCellView: NSTableCellView {
         icon.imageScaling = .scaleProportionallyUpOrDown
         name.lineBreakMode = .byTruncatingMiddle
         name.cell?.usesSingleLineMode = true
+        // A truncated name shows in full when the pointer rests on it.
+        name.allowsExpansionToolTips = true
         addSubview(dot)
         addSubview(icon)
         addSubview(name)

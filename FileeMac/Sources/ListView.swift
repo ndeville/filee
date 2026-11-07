@@ -204,7 +204,8 @@ final class ListView: NSObject, FileView, NSOutlineViewDataSource, NSOutlineView
         }
         deferredReload = false
         var t0 = Profile.now
-        let selected = selectedItems.map(\.path)
+        // Another folder: the old selection can't be in it (a 50,000-row selection cost 130 ms to carry over).
+        let selected = model.path == cachedFolder ? selectedItems.map(\.path) : []
         if model.path != cachedFolder {
             for n in nodeCache.values { unwatch(n) }
             nodeCache = [:]
@@ -313,7 +314,7 @@ final class ListView: NSObject, FileView, NSOutlineViewDataSource, NSOutlineView
                 c.identifier = id
                 return c
             }()
-            cell.name.stringValue = it.name
+            cell.name.stringValue = it.name.singleLine
             cell.name.font = Theme.listFont(bold: it.isFolder, italic: it.kind == .symlink)
             cell.name.textColor = Theme.fg
             cell.name.isEditable = false
@@ -449,8 +450,9 @@ final class ListView: NSObject, FileView, NSOutlineViewDataSource, NSOutlineView
         for p in paths {
             if let n = nodeCache[p], outline.row(forItem: n) >= 0 { rows.insert(outline.row(forItem: n)) } else { missing.insert(p) }
         }
-        // Children of expanded folders aren't in the cache: scan the rows only for those.
-        if !missing.isEmpty {
+        // Children of expanded folders aren't in the cache: scan the rows only for those. Nothing expanded: no such rows
+        // (a scan of 50,000 rows for the last folder's selection cost 100 ms per folder opened).
+        if !missing.isEmpty, !expandedPaths.isEmpty {
             for r in 0..<outline.numberOfRows {
                 if let n = outline.item(atRow: r) as? ListNode, missing.contains(n.item.path) { rows.insert(r) }
             }
@@ -540,6 +542,7 @@ final class ListView: NSObject, FileView, NSOutlineViewDataSource, NSOutlineView
               let cell = outline.view(atColumn: 0, row: row, makeIfNecessary: true) as? NameCellView else { return false }
         outline.scrollRowToVisible(row)
         editingNode = node
+        cell.name.stringValue = node.item.name
         cell.name.isEditable = true
         cell.name.isSelectable = true
         cell.name.textColor = Theme.fg
@@ -553,7 +556,7 @@ final class ListView: NSObject, FileView, NSOutlineViewDataSource, NSOutlineView
 
     func control(_ control: NSControl, textView: NSTextView, doCommandBy selector: Selector) -> Bool {
         if selector == #selector(NSResponder.cancelOperation(_:)) {
-            if let node = editingNode { (control as? NSTextField)?.stringValue = node.item.name }
+            if let node = editingNode { (control as? NSTextField)?.stringValue = node.item.name.singleLine }
             editingNode = nil
             endEditing(control)
             runDeferredReload()
@@ -570,7 +573,7 @@ final class ListView: NSObject, FileView, NSOutlineViewDataSource, NSOutlineView
         guard let node else { return }
         let newName = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
         if newName.isEmpty || newName == node.item.name {
-            field.stringValue = node.item.name
+            field.stringValue = node.item.name.singleLine
             runDeferredReload()
             return
         }
@@ -593,7 +596,7 @@ final class ListView: NSObject, FileView, NSOutlineViewDataSource, NSOutlineView
         let row = outline.row(forItem: node)
         guard row >= 0, let cell = outline.view(atColumn: 0, row: row, makeIfNecessary: false) as? NameCellView else { return }
         cell.name.abortEditing()
-        cell.name.stringValue = node.item.name
+        cell.name.stringValue = node.item.name.singleLine
         endEditing(cell.name)
     }
 
