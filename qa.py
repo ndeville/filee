@@ -16,6 +16,7 @@ import struct
 import subprocess
 import sys
 import time
+import unicodedata
 import zlib
 from datetime import datetime
 from pathlib import Path
@@ -490,6 +491,263 @@ def suites(fx: dict) -> dict:
     }
 
 
+# Worst-case data pass (~/ai/.claude/skills/appee/references/worst-case.md). Every name is invented; the limits are
+# the file system's (255 bytes a name, APFS sparse files, 1970 and 2040 dates). Only inside $TMPDIR/filee-qa/worst.
+HUGE_FILES = 50_000  # Nic's largest real folder holds 21,361 files (CLAUDE.md, Facts): about 2.3 times headroom.
+DEEP = ["Clients", "Example Corp", "2026", "Q3", "Contracts", "Signed", "Legal review", "Round 2", "Annexes", "Annex B",
+        "Pricing", "Regional", "EMEA", "DACH", "Germany", "Bavaria", "Munich office", "Facilities", "Archive", "Old scans"]
+
+
+def name_of_bytes(text: str, ext: str, limit: int = 255) -> str:
+    """The longest prefix of `text` that, with `ext`, fits `limit` UTF-8 bytes: a name at the file system's limit."""
+    out = ""
+    for ch in text:
+        if len((out + ch + ext).encode("utf-8")) > limit:
+            break
+        out += ch
+    return out.rstrip() + ext
+
+
+def remove_tree(path: Path):
+    """rmtree that also removes the folders QA locked (chmod 000)."""
+    if not path.exists():
+        return
+    for d, dirs, _ in os.walk(path):
+        for x in dirs:
+            try:
+                os.chmod(os.path.join(d, x), 0o755)
+            except OSError:
+                pass
+    subprocess.run(["chmod", "-R", "u+rwx", str(path)], capture_output=True)
+    shutil.rmtree(path)
+
+
+def build_worst_fixtures(base: Path) -> dict:
+    """The worst-case folder (W), a 20-folder path, Empty, One and Huge (50,000 files)."""
+    remove_tree(base)
+    w = base / "W"
+    w.mkdir(parents=True)
+    long_pdf = name_of_bytes("Quarterly business review for the regional sales leadership team, with the pipeline forecast, "
+                             "territory plan, hiring plan and partner programme - draft for comments from finance, legal and "
+                             "the executive committee - Q3 Board Deck - FINAL (revised) v12 [approved by legal]", ".pdf")
+    long_cjk = name_of_bytes("王秀英的第三季度区域销售团队业务回顾包括管道预测区域计划招聘计划和合作伙伴计划财务法务和执行委员会征求意见稿最终修订版第十二版法务已批准" * 2, ".md")
+    nfd = unicodedata.normalize("NFD", "Café résumé - Ólafur Darri Ólafsson.txt")
+    files = {
+        # Row 1 onwards (name order): the long name, the emoji, the 1-letter name, the newline, right to left.
+        long_pdf: b"%PDF-1.4\n",
+        long_cjk: "# 报告".encode("utf-8"),
+        "🦊 Fox - 👩🏽‍💻 Priya pairing notes.md": b"# notes",
+        "J": b"",
+        "first line\nsecond line.txt": b"newline in the name",
+        "تقرير الربع الثالث - نور الهدى عبد الرحمن.pdf": b"%PDF-1.4\n",
+        "Đặng Thị Ngọc Hân - hợp đồng.docx": b"docx",
+        nfd: b"NFD name",
+        "Crème brûlée recipe.txt": b"NFC name",
+        "10:30 meeting - agenda.txt": b"colon in the name",
+        " Sam   Lee  - leading spaces.txt": b"",
+        "trailing space .txt": b"",
+        "README": b"no extension",
+        "Makefile": b"all:\n",
+        "archive.tar.gz": b"\x1f\x8b",
+        "invoice-2026-0042.pdf.zip": b"PK",
+        "IMG_20250914_183022_HDR_portrait_edited_edited.HEIC": b"",
+        "Benachrichtigungseinstellungen.xlsx": b"xlsx",
+        "<script>alert(1) &amp; **bold** <b>x.html": b"<p>literal</p>",
+        "9f8e7d6c-5b4a-4c3d-8e2f-1a0b9c8d7e6f.json": b"{}",
+        "empty-0-bytes.txt": b"",
+        ".env.example": b"KEY=example",
+        ".Quarterly report.pdf.icloud": b"bplist00",  # the iCloud placeholder name of macOS 13 and older
+    }
+    for name, data in files.items():
+        (w / name).write_bytes(data)
+    # 2 TB, sparse: APFS stores no blocks for it.
+    with open(w / "vm-disk-2tb.img", "wb") as f:
+        f.truncate(2 * 1024 ** 4)
+    os.utime(w / "README", (1, 1))  # 1970-01-01 00:00:01 UTC
+    os.utime(w / "Makefile", (2_222_222_222, 2_222_222_222))  # 2040-06-02
+    os.symlink("loop-b", w / "loop-a")
+    os.symlink("loop-a", w / "loop-b")
+    os.symlink("does-not-exist.txt", w / "broken link.txt")
+    for folder in ["Aleksandra Wiśniewska-Kowalczyk - Projects 2026 and the archive of every signed contract",
+                   "🦊 Fox", "مجلد المشاريع", "王秀英", "Locked Folder", "deep"]:
+        (w / folder).mkdir()
+    os.symlink(str(w / "deep"), w / "link to deep")
+    app = w / "Fake Tool.app" / "Contents"
+    app.mkdir(parents=True)
+    (app / "Info.plist").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<plist version="1.0"><dict>'
+                                    "<key>CFBundleIdentifier</key><string>test.example.faketool</string>"
+                                    "<key>CFBundleName</key><string>Fake Tool</string></dict></plist>\n", encoding="utf-8")
+    (w / "Family Photos.photoslibrary" / "database").mkdir(parents=True)
+    (w / "Locked Folder" / "secret.txt").write_text("x", encoding="utf-8")
+    os.chmod(w / "Locked Folder", 0)
+    leaf = w / "deep"
+    for d in DEEP:
+        leaf = leaf / d
+    leaf.mkdir(parents=True)
+    (leaf / "Scan 0001 - lease agreement.pdf").write_bytes(b"%PDF-1.4\n")
+    empty, one, one_folder, huge = base / "Empty", base / "One", base / "One Folder", base / "Huge"
+    for d in (empty, one, one_folder / "Only child", huge):
+        d.mkdir(parents=True)
+    (one / "only-file.txt").write_text("1", encoding="utf-8")
+    patterns = ["IMG_2026{0:04d}_{0:06d}.HEIC", "Invoice {0:05d} - Example Supplier GmbH.pdf", "meeting-notes-{0}.md",
+                "export_{0:05d}.csv", "Re: Weekly sync {0} - action items.eml", "screen recording {0}.mov"]
+    for i in range(HUGE_FILES):
+        (huge / patterns[i % len(patterns)].format(i)).touch()
+    return {"W": str(w), "leaf": str(leaf), "deep": str(w / "deep"), "empty": str(empty), "one": str(one),
+            "oneFolder": str(one_folder), "huge": str(huge), "locked": str(w / "Locked Folder"), "longPdf": long_pdf,
+            "nfd": nfd, "fox": str(w / "🦊 Fox"), "arabic": str(w / "مجلد المشاريع"),
+            "longFolder": str(w / "Aleksandra Wiśniewska-Kowalczyk - Projects 2026 and the archive of every signed contract")}
+
+
+def write_worst_home(home: Path, fx: dict):
+    """Config home with worst-case favourites, tabs, recent folders and a drop stack."""
+    home.mkdir(parents=True, exist_ok=True)
+    settings = {"newTabPath": fx["W"], "jumps": {"k": fx["W"]},
+                "favourites": [{"name": "Aleksandra Wiśniewska-Kowalczyk - Projects 2026 and the archive", "path": fx["longFolder"]},
+                               {"name": "🦊 Fox", "path": fx["fox"]}, {"name": "مجلد المشاريع", "path": fx["arabic"]},
+                               {"name": "W", "path": fx["W"]}, {"name": "Old scans", "path": fx["leaf"]}]}
+    (home / "settings.json").write_text(json.dumps(settings, indent=2, ensure_ascii=False), encoding="utf-8")
+    (home / "actions.json").write_text("[]", encoding="utf-8")
+    w = fx["W"]
+    # Pane 2 has 15 tabs, 1 per folder of the 20-folder path: more tabs than the pane has room for.
+    chain = [fx["deep"] + "/" + "/".join(DEEP[:i]) for i in range(6, 20)]
+    state = {"panes": [{"tabs": [{"path": w}, {"path": fx["longFolder"]}, {"path": fx["fox"]}, {"path": fx["arabic"]}], "activeTab": 0},
+                       {"tabs": [{"path": p} for p in chain] + [{"path": fx["leaf"]}], "activeTab": 14}],
+             "dualPane": True, "activePane": 0, "frame": "{{80, 80}, {1400, 900}}",
+             "recent": [fx["leaf"], fx["longFolder"], fx["arabic"], fx["fox"], fx["huge"]],
+             "dropStack": [w + "/" + fx["longPdf"], w + "/first line\nsecond line.txt", w + "/🦊 Fox - 👩🏽‍💻 Priya pairing notes.md"]}
+    (home / "state.json").write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
+
+
+WORST_SIZES = [("default", 1400, 900), ("prompter", 1024, 600), ("dell-portrait", 2160, 3815)]
+
+
+def worst_suite(fx: dict) -> list:
+    W, leaf, huge = fx["W"], fx["leaf"], fx["huge"]
+    visible_w = 34  # 23 files + 2 TB file + 3 symlinks + 6 folders + 2 packages + "link to deep", hidden files out
+    steps = [
+        # Made-up volumes, so Nic's own never show in a snapshot; worst-case names and sizes among them.
+        {"op": "demoVolumes", "volumes": [
+            {"name": "Macintosh HD", "path": "/", "free": "303 GB", "internal": True},
+            {"name": "Samsung T7 Shield - Project Archive 2026 (do not unplug)", "free": "1.82 TB"},
+            {"name": "Untitled 2", "free": "0 B"},
+            {"name": "王秀英的备份", "free": "931.5 GB"},
+            {"name": "NAS-Backup-Share-Example-Corp-Long-Name", "free": "12.4 TB", "local": False}]},
+        {"op": "theme", "theme": "light"},
+        {"op": "navigate", "pane": 1, "path": leaf},
+        {"op": "navigate", "pane": 0, "path": W},
+        {"op": "wait", "ms": 400},
+        {"op": "expect", "label": "W lists every worst-case name, hidden files out", "visible": visible_w},
+        {"op": "query", "text": "cafe"},
+        {"op": "expect", "label": "filter: 'cafe' finds the NFD name", "visible": 1},
+        {"op": "query", "text": "café"},
+        {"op": "expect", "label": "filter: NFC 'café' finds the NFD name", "visible": 1},
+        {"op": "query", "text": "王秀英"},
+        {"op": "expect", "label": "filter: CJK finds the CJK folder and file", "visible": 2},
+        {"op": "query", "text": "zzqx"},
+        {"op": "expect", "label": "filter with no match says so, and the status bar drops the old selection",
+         "visible": 0, "messageContains": "No match", "statusBar": "items"},
+        {"op": "screenshot", "name": "w-filter-none-light"},
+        {"op": "query", "text": ""},
+        {"op": "select", "pane": 0, "names": ["vm-disk-2tb.img"]},
+        {"op": "expect", "label": "status bar: the 2 TB file's size", "statusBar": "2.00 TB"},
+        {"op": "key", "keys": "cmd+i"},
+        {"op": "wait", "ms": 600},
+        {"op": "expect", "label": "Get Info: 2 TB, and on disk almost nothing (sparse)", "infoContains": ["2.00 TB"]},
+        {"op": "select", "pane": 0, "names": [fx["longPdf"]]},
+        {"op": "key", "keys": "cmd+i"},
+        {"op": "wait", "ms": 600},
+        {"op": "screenshot", "name": "w-info-255-bytes", "target": "info"},
+        {"op": "select", "pane": 0, "names": ["README"]},
+        {"op": "key", "keys": "cmd+i"},
+        {"op": "wait", "ms": 600},
+        {"op": "expect", "label": "Get Info: a 1970 date", "infoContains": ["1970-01-01"]},
+        {"op": "select", "pane": 0, "names": ["Makefile"]},
+        {"op": "key", "keys": "cmd+i"},
+        {"op": "wait", "ms": 600},
+        {"op": "expect", "label": "Get Info: a 2040 date", "infoContains": ["2040-"]},
+        {"op": "infoClose"},
+        {"op": "select", "pane": 0, "names": ["first line\nsecond line.txt"]},
+        {"op": "expect", "label": "a line break in a name shows as ⏎ on 1 line", "statusBar": "first line⏎second line.txt"},
+        {"op": "screenshot", "name": "w-newline-selected-light"},
+        {"op": "selectAll", "pane": 0},
+        {"op": "expect", "label": "select all: the count in the status bar", "statusBar": f"{visible_w} selected"},
+        {"op": "navigate", "pane": 0, "path": fx["locked"]},
+        {"op": "wait", "ms": 300},
+        {"op": "expect", "label": "an unreadable folder (chmod 000) blames its permissions, not macOS privacy",
+         "messageContains": "permission", "statusBar": "0 items"},
+        {"op": "screenshot", "name": "w-locked-light"},
+        {"op": "navigate", "pane": 0, "path": fx["empty"]},
+        {"op": "expect", "label": "Empty: 0 items and the empty state", "visible": 0, "countContains": ["0 items"], "messageContains": "Empty folder"},
+        {"op": "screenshot", "name": "w-empty-light"},
+        {"op": "navigate", "pane": 0, "path": fx["one"]},
+        {"op": "expect", "label": "One: '1 file', never '1 files'", "visible": 1, "countContains": ["1 file"], "countLacks": "1 files"},
+        {"op": "navigate", "pane": 0, "path": fx["oneFolder"]},
+        {"op": "expect", "label": "One folder: '1 folder'", "countContains": ["1 folder"], "countLacks": "1 folders"},
+        {"op": "navigate", "pane": 0, "path": W},
+        {"op": "key", "keys": "shift+cmd+i"},
+        {"op": "expect", "label": "invisibles shown: the dot files and the iCloud placeholder", "visible": visible_w + 2},
+        {"op": "screenshot", "name": "w-invisibles-light"},
+        {"op": "key", "keys": "shift+cmd+i"},
+        {"op": "navigate", "pane": 1, "path": leaf},
+        {"op": "select", "pane": 1, "names": ["Scan 0001 - lease agreement.pdf"]},
+        {"op": "key", "keys": "shift+cmd+d"},
+        {"op": "expect", "label": "the copied 20-folder path shows in the toast", "pane": 1, "statusContains": "Copied path"},
+        {"op": "screenshot", "name": "w-toast-deep-path-light"},
+        {"op": "navigate", "pane": 0, "path": W},
+        {"op": "select", "pane": 0, "names": [fx["longPdf"]]},
+    ]
+    # Huge first, before the large window sizes leave their layers behind: the hot-path budgets. SPEC 1.3 sets them for 10,000 files; at 50,000 the list and open budgets scale by 5.
+    steps += [
+        # The listing alone has the SPEC budget scaled by 5 (750 ms, the measure below); open to rows on screen adds the view
+        # (nodes, column sizes): measured 510-760 ms, guarded at 1 s.
+        {"op": "measureOpen", "pane": 0, "path": huge, "budgetMs": 1000},
+        {"op": "measure", "pane": 0, "query": "inv9"},
+        {"op": "expect", "label": f"{HUGE_FILES:,} files listed", "visible": HUGE_FILES},
+        {"op": "measureScroll", "pane": 0, "pages": 200},
+        {"op": "measureScroll", "pane": 0, "pages": 300, "rowsPerFrame": 3, "budgetMs": 16},
+        {"op": "query", "text": "invoice 4"},
+        {"op": "expect", "label": "the filter count has thousands separators", "countContains": [f"of {HUGE_FILES:,}"]},
+        {"op": "screenshot", "name": "huge-filter-light"},
+        {"op": "query", "text": ""},
+        {"op": "selectAll", "pane": 0},
+        {"op": "expect", "label": "select all in Huge: the count has thousands separators", "statusBar": f"{HUGE_FILES:,} selected"},
+        {"op": "theme", "theme": "dark"},
+        {"op": "screenshot", "name": "huge-select-all-dark"},
+        {"op": "theme", "theme": "light"},
+        {"op": "measureOpen", "pane": 0, "path": W, "budgetMs": 150},
+        {"op": "wait", "ms": 3000},  # the app's own memory relief runs 2 s after a folder change
+        {"op": "measure", "pane": 0},
+        # SPEC 1.3 sets 120 MB for 2 panes and 4 tabs; this home has 19 tabs and just selected 50,000 files (about 120 MB).
+        {"op": "expect", "label": "memory under 150 MB after the 50,000-file folder, 19 tabs", "memoryBelowMB": 150},
+    ]
+    for size, width, height in WORST_SIZES:
+        steps.append({"op": "window", "width": width, "height": height})
+        for theme in ("light", "dark"):
+            steps += [{"op": "theme", "theme": theme}, {"op": "key", "keys": "cmd+5"},
+                      {"op": "screenshot", "name": f"{size}-list-{theme}"}]
+            if size == "default":
+                steps += [{"op": "select", "pane": 0, "names": ["deep"]}, {"op": "key", "keys": "cmd+4"},
+                          {"op": "key", "keys": "right"}, {"op": "key", "keys": "right"}, {"op": "key", "keys": "right"},
+                          {"op": "screenshot", "name": f"{size}-columns-{theme}"},
+                          {"op": "key", "keys": "cmd+3"}, {"op": "wait", "ms": 800},
+                          {"op": "screenshot", "name": f"{size}-thumbnails-{theme}"},
+                          {"op": "key", "keys": "cmd+5"}, {"op": "select", "pane": 0, "names": [fx["longPdf"]]}]
+    # The largest zoom step (8 presses of cmd+=, Theme.zoomRange) at the default size.
+    steps.append({"op": "window", "width": 1400, "height": 900})
+    steps += [{"op": "key", "keys": "cmd+="}] * 9
+    steps.append({"op": "expect", "label": "zoom stops at the largest step", "zoom": 8})
+    for theme in ("light", "dark"):
+        steps += [{"op": "theme", "theme": theme}, {"op": "key", "keys": "cmd+5"}, {"op": "screenshot", "name": f"zoom-max-list-{theme}"},
+                  {"op": "key", "keys": "cmd+3"}, {"op": "wait", "ms": 800}, {"op": "screenshot", "name": f"zoom-max-thumbnails-{theme}"},
+                  {"op": "key", "keys": "cmd+5"}]
+    steps += [{"op": "key", "keys": "cmd+0"},
+              {"op": "window", "width": 640, "height": 360}, {"op": "theme", "theme": "light"},
+              {"op": "screenshot", "name": "min-size-list-light"},
+              {"op": "window", "width": 1400, "height": 900}]
+    return steps
+
+
 def run_suite(name: str, steps: list, home: Path, out: Path, fx: dict) -> dict:
     out.mkdir(parents=True, exist_ok=True)
     script = out / "steps.json"
@@ -499,7 +757,7 @@ def run_suite(name: str, steps: list, home: Path, out: Path, fx: dict) -> dict:
     env.pop("PYTHONPATH", None)
     start = time.time()
     try:
-        subprocess.run([str(APP)], env=env, timeout=180, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run([str(APP)], env=env, timeout=600 if name == "worst" else 180, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except subprocess.TimeoutExpired:
         return {"suite": name, "error": "timeout"}
     report_path = out / "report.json"
@@ -672,7 +930,7 @@ def main():
     if not APP.exists():
         print("❌ build/Filee.app missing: run ./build.sh", file=sys.stderr)
         sys.exit(1)
-    names = list(suites({"A": "", "B": "", "big": "", "pics": ""}).keys()) + ["cli"]
+    names = list(suites({"A": "", "B": "", "big": "", "pics": ""}).keys()) + ["worst", "cli"]
     if args.list:
         print("\n".join(names))
         return
@@ -685,12 +943,18 @@ def main():
             total_fail += suite_cli()
             continue
         base = BASE / name
-        fx = build_fixtures(base / "fixtures")
         home = base / "home"
         if home.exists():
             shutil.rmtree(home)
-        write_home(home, fx)
-        steps = suites(fx)[name]
+        if name == "worst":
+            print(f"▶ worst: building the worst-case fixtures ({HUGE_FILES:,} files)…", flush=True)
+            fx = build_worst_fixtures(base / "fixtures")
+            write_worst_home(home, fx)
+            steps = worst_suite(fx)
+        else:
+            fx = build_fixtures(base / "fixtures")
+            write_home(home, fx)
+            steps = suites(fx)[name]
         out = BASE / "reports" / stamp / name
         print(f"▶ {name} ({len(steps)} steps)…", flush=True)
         r = run_suite(name, steps, home, out, fx)
@@ -707,6 +971,10 @@ def main():
         for s in r["steps"]:
             if s.get("op") == "measure":
                 print(f"   📏 {s.get('items')} items: list {s.get('list_ms')} ms (syscalls {s.get('lister_ms')} ms), filter {s.get('filter_ms')} ms, memory {s.get('memory_mb')} MB, launch {s.get('launch_ms')} ms")
+            if s.get("op") == "measureOpen":
+                print(f"   📏 open {s.get('items')} items to rows on screen: {s.get('open_ms')} ms (budget {s.get('budget_ms')} ms)")
+            if s.get("op") == "measureScroll":
+                print(f"   📏 scroll {s.get('rows')} rows, {s.get('pages')} frames of {s.get('rows_per_frame')} rows: p50 {s.get('p50_ms')} ms, p95 {s.get('p95_ms')} ms, max {s.get('max_ms')} ms")
         print(f"   📁 {out}")
     print(f"\n{'✅ All suites passed' if total_fail == 0 else f'❌ {total_fail} failure(s)'}")
     sys.exit(1 if total_fail else 0)

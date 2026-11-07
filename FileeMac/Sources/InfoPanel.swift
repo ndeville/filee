@@ -256,6 +256,9 @@ final class InfoPanel: NSObject {
     var shownText: String { text.string }
 
     func close() { panel.orderOut(nil) }
+
+    /// QA screenshots of the panel.
+    var qaContentView: NSView? { panel.contentView }
 }
 
 extension DirectoryLister.Usage {

@@ -100,6 +100,77 @@ final class QAHarness {
             record(step, ["path": p.path])
             done()
 
+        case "window":
+            // The worst-case pass: the window at another size (the Prompter, the portrait Dell). It stays not resizable.
+            guard let w = wc.window else { record(step, ok: false); done(); return }
+            let size = NSSize(width: step["width"] as? Double ?? 1400, height: step["height"] as? Double ?? 900)
+            w.setFrame(NSRect(origin: w.frame.origin, size: size), display: true)
+            wc.layoutAll()
+            w.contentView?.layoutSubtreeIfNeeded()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                self.record(step, ok: w.frame.size == size, ["frame": NSStringFromRect(w.frame)])
+                done()
+            }
+
+        case "theme":
+            // "light" or "dark", set in the step: a snapshot never takes the system appearance by accident.
+            AppDelegate.shared.setTheme(step["theme"] as? String ?? "light")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                self.record(step, ok: AppDelegate.shared.isDark == (step["theme"] as? String == "dark"))
+                done()
+            }
+
+        case "query":
+            // A filter query set directly: text the QA key path can't type (accents, NFC against NFD names).
+            let p = pane(step)
+            p.folderModel.query = step["text"] as? String ?? ""
+            record(step, ["visible": names(p.folderModel.visible)])
+            done()
+
+        case "measureOpen":
+            // Open a folder to rows on screen: navigate, list, build the view, lay out and draw the visible rows.
+            let p = pane(step)
+            wc.activate(pane: p.index)
+            let start = ProcessInfo.processInfo.systemUptime
+            // navigate lists a folder it hasn't loaded on the calling thread (load(sync:)): no second listing here.
+            p.navigate(to: (step["path"] as? String ?? "~").expandingHome)
+            p.container.layoutSubtreeIfNeeded()
+            p.container.displayIfNeeded()
+            let ms = (ProcessInfo.processInfo.systemUptime - start) * 1000
+            // 0: no budget (JSON has no infinity).
+            let budget = step["budgetMs"] as? Double ?? 0
+            record(step, ok: budget == 0 || ms < budget, ["items": p.folderModel.items.count, "open_ms": ms.rounded(), "budget_ms": budget])
+            done()
+
+        case "measureScroll":
+            // Scroll the list from the top to the end, 1 page per frame, and time each page (layout, row views, draw).
+            let p = pane(step)
+            guard let list = p.fileView as? ListView else { record(step, ok: false, ["error": "not the list view"]); done(); return }
+            let outline = list.outline
+            // "rowsPerFrame": a flick moves a few rows per frame; without it, every frame jumps a whole page (the scroller drag).
+            let page = max(1, Int(list.scroll.contentSize.height / max(1, outline.rowHeight)))
+            let perFrame = step["rowsPerFrame"] as? Int ?? page
+            let pages = min(step["pages"] as? Int ?? 200, max(1, outline.numberOfRows / perFrame))
+            var times: [Double] = []
+            let clip = list.scroll.contentView
+            for i in 1...pages {
+                let t = ProcessInfo.processInfo.systemUptime
+                let y = perFrame == page ? CGFloat(i * outline.numberOfRows / pages) * outline.rowHeight
+                                         : CGFloat(i * perFrame) * outline.rowHeight
+                clip.scroll(to: NSPoint(x: 0, y: min(y, max(0, outline.frame.height - clip.bounds.height))))
+                list.scroll.reflectScrolledClipView(clip)
+                list.scroll.layoutSubtreeIfNeeded()
+                list.scroll.displayIfNeeded()
+                times.append((ProcessInfo.processInfo.systemUptime - t) * 1000)
+            }
+            times.sort()
+            let p50 = times[times.count / 2], p95 = times[min(times.count - 1, Int(Double(times.count) * 0.95))], worst = times.last ?? 0
+            let budget = step["budgetMs"] as? Double ?? 0
+            outline.scrollRowToVisible(0)
+            record(step, ok: budget == 0 || p95 < budget, ["rows": outline.numberOfRows, "pages": pages, "rows_per_frame": perFrame, "p50_ms": (p50 * 10).rounded() / 10,
+                                           "p95_ms": (p95 * 10).rounded() / 10, "max_ms": (worst * 10).rounded() / 10, "budget_ms": budget])
+            done()
+
         case "url":
             // A filee:// URL straight into the router (agent interface), without LaunchServices.
             if let u = URL(string: step["url"] as? String ?? "") { AppDelegate.shared.route(u) }
@@ -411,7 +482,9 @@ final class QAHarness {
             done()
 
         case "screenshot":
-            screenshot(step["name"] as? String ?? "shot-\(index)")
+            // "target": "info" draws the Get Info panel instead of the window.
+            let target: NSView? = step["target"] as? String == "info" ? InfoPanel.shared.qaContentView : nil
+            screenshot(step["name"] as? String ?? "shot-\(index)", of: target)
             record(step)
             done()
 
@@ -456,6 +529,7 @@ final class QAHarness {
         return ["widths": widths, "path": p.path, "selected": names(p.selectedItems), "visible": p.folderModel.visible.count,
                 "query": p.folderModel.query, "view": p.tab.view.rawValue, "activePane": wc.activePaneIndex,
                 "dual": wc.dualPane, "tabs": p.tabs.count, "count": p.countLabel.stringValue, "status": wc.toast.text,
+                "statusBar": wc.statusBar.left.stringValue, "message": p.messageLabel.isHidden ? "" : p.messageLabel.stringValue,
                 "favourites": wc.sidebar.favouritesOutline, "info": InfoPanel.shared.shownText]
     }
 
@@ -518,6 +592,9 @@ final class QAHarness {
             ok = ok && (fits || tight)
         }
         if let s = step["statusContains"] as? String { ok = ok && wc.toast.text.contains(s) }
+        if let s = step["statusBar"] as? String { ok = ok && wc.statusBar.left.stringValue.contains(s) }
+        if let s = step["countLacks"] as? String { ok = ok && !p.countLabel.stringValue.contains(s) }
+        if let s = step["messageContains"] as? String { ok = ok && !p.messageLabel.isHidden && p.messageLabel.stringValue.contains(s) }
         if let s = step["infoContains"] as? [String] { ok = ok && s.allSatisfy { InfoPanel.shared.shownText.contains($0) } }
         if step["openWithMenu"] as? Bool == true {
             // The context menu's Open With submenu: the default app first, each app once and with its icon, then Other….
