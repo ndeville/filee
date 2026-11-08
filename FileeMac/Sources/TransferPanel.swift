@@ -87,7 +87,7 @@ final class TransferPanel: FlippedView {
         }
         guard !row.finished else { return }
         row.fraction = p.fraction
-        var title = "\(p.title) \(min(p.itemsDone + 1, p.itemsTotal)) of \(p.itemsTotal)"
+        var title = "\(p.title) \(min(p.itemsDone + 1, p.itemsTotal).formatted()) of \(p.itemsTotal.formatted())"
         if !p.currentName.isEmpty { title += " · \(p.currentName)" }
         row.title.stringValue = title
         row.detail.stringValue = Self.detail(p, elapsed: ProcessInfo.processInfo.systemUptime - row.started)

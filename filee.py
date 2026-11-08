@@ -52,6 +52,11 @@ COMMANDS = [
 ]
 
 
+def count_of(n: int, one: str, many: str) -> str:
+    """A count and its noun: "1 transfer", "0 transfers", "1,284 files"."""
+    return f"{n:,} {one if n == 1 else many}"
+
+
 def emit(data: dict, human: str = "") -> int:
     """Print the result: 1 JSON document with --json, else the human line."""
     if JSON:
@@ -198,8 +203,8 @@ def cmd_status(args: argparse.Namespace) -> int:
     elif not running:
         human = f"✅ running (pid {pid}), no live state: Filee {data['version']} predates the agent interface"
     else:
-        human = (f"✅ running, {data['selection_count']} selected, {data['transfers']} transfers, "
-                 f"{data['stack']} in the drop stack")
+        human = (f"✅ running, {data['selection_count'] or 0:,} selected, {count_of(data['transfers'] or 0, 'transfer', 'transfers')}, "
+                 f"{data['stack']:,} in the drop stack")
     return emit(data, human)
 
 
@@ -215,7 +220,7 @@ def cmd_selection(args: argparse.Namespace) -> int:
     for p in shown:
         print(p)
     if total > len(shown):
-        print(f"… {total - len(shown)} more", file=sys.stderr)
+        print(f"… {total - len(shown):,} more", file=sys.stderr)
     return 0
 
 
@@ -268,7 +273,7 @@ def cmd_stack_add(args: argparse.Namespace) -> int:
     missing = [x for x, p in zip(args.paths, paths) if not p]
     if missing:
         return fail(f"Nothing at {missing[0]}", "Give paths of existing files or folders")
-    return run_action("stack-add", [("path", str(p)) for p in paths], f"📥 {len(paths)} added to the drop stack")
+    return run_action("stack-add", [("path", str(p)) for p in paths], f"📥 {count_of(len(paths), 'item', 'items')} added to the drop stack")
 
 
 def cmd_stack_clear(args: argparse.Namespace) -> int:

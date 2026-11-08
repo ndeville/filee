@@ -251,7 +251,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
             let folders = sel.filter(\.isFolder).count
             var text = sel.count == 1 ? sel[0].name.singleLine : "\(sel.count.formatted()) selected"
             if bytes > 0 { text += " · \(Format.size(bytes))" }
-            if folders > 0, sel.count > 1 { text += " · \(folders.formatted()) folder\(folders == 1 ? "" : "s")" }
+            if folders > 0, sel.count > 1 { text += " · \(Count.of(folders, "folder", "folders"))" }
             statusBar.left.stringValue = text
         }
         if QLPreviewPanel.sharedPreviewPanelExists(), QLPreviewPanel.shared().isVisible {
@@ -555,8 +555,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         Clipboard.board.clearContents()
         Clipboard.board.setString(text, forType: .string)
         let lines = text.split(separator: "\n").map(String.init)
-        let more = lines.count > 1 ? "  (+\(lines.count - 1) more)" : ""
-        showMessage("📋 Copied \(lines.count == 1 ? what : "\(lines.count) \(what)s")", detail: (lines.first ?? "") + more)
+        let more = lines.count > 1 ? "  (+\((lines.count - 1).formatted()) more)" : ""
+        showMessage("📋 Copied \(lines.count == 1 ? what : Count.of(lines.count, what, what + "s"))", detail: (lines.first ?? "") + more)
     }
 
     func openTerminal(at folder: String) {

@@ -39,7 +39,7 @@ final class ActionRunner {
         Clipboard.board.clearContents()
         Clipboard.board.setString(paths.joined(separator: "\n"), forType: .string)
         let calls = action.invocations(paths: paths, dir: pane.targetFolder)
-        log("▶ \(action.name) on \(paths.count) item(s)")
+        log("▶ \(action.name) on \(Format.items(paths.count))")
         switch action.mode {
         case .terminal: runInTerminal(calls, action: action, browser: browser)
         case .background: runInBackground(calls, action: action, browser: browser, folder: pane.targetFolder)
@@ -71,9 +71,9 @@ final class ActionRunner {
         }
         group.notify(queue: .main) { [weak browser] in
             if failures.isEmpty {
-                browser?.showMessage("✅ \(action.name): done (\(calls.count))")
+                browser?.showMessage("✅ \(action.name): done (\(calls.count.formatted()))")
             } else {
-                browser?.showMessage("❌ \(action.name): \(failures.count) of \(calls.count) failed · \(failures[0]) · see ~/.filee/logs/actions.log", error: true)
+                browser?.showMessage("❌ \(action.name): \(failures.count.formatted()) of \(calls.count.formatted()) failed · \(failures[0]) · see ~/.filee/logs/actions.log", error: true)
             }
             if action.refresh { OperationCenter.shared.touched([folder]) }
         }

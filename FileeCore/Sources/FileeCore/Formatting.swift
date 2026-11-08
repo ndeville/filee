@@ -40,7 +40,7 @@ public enum Format {
         switch days {
         case 0: return "today \(timeFormat.string(from: d))"
         case 1: return "yesterday \(timeFormat.string(from: d))"
-        case 2...6: return "\(days) days ago"
+        case 2...6: return "\(Count.of(days, "day", "days")) ago"
         default: return fullFormat.string(from: d)
         }
     }
@@ -70,7 +70,15 @@ public enum Format {
     }
 
     /// "1 item", "12 items".
-    public static func items(_ count: Int) -> String { count == 1 ? "1 item" : "\(count.formatted()) items" }
+    public static func items(_ count: Int) -> String { Count.of(count, "item", "items") }
+}
+
+/// A count and its noun: "1 file", "0 files", "1,284 files". Every number shown with a noun goes through it,
+/// so no label reads "1 files" and no count lacks its thousands separator.
+public enum Count {
+    public static func of(_ n: Int, _ one: String, _ many: String) -> String {
+        "\(n.formatted()) \(n == 1 ? one : many)"
+    }
 }
 
 public extension String {

@@ -27,23 +27,42 @@ final class PathField: NSTextField {
     }
 }
 
-/// The strip of tabs above a pane.
+/// The strip of tabs above a pane. More tabs than room: the strip scrolls (wheel or trackpad), keeps the active tab
+/// in view, and a chevron at its trailing edge lists the tabs that don't fit.
 final class TabStrip: FlippedView {
-    var titles: [String] = [] { didSet { rebuild() } }
-    var active = 0 { didSet { rebuild() } }
+    var titles: [String] = [] { didSet { revealActive = true; rebuild() } }
+    var active = 0 { didSet { revealActive = true; rebuild() } }
     var activePane = true { didSet { rebuild() } }
     var onSelect: ((Int) -> Void)?
     var onClose: ((Int) -> Void)?
     var onNew: (() -> Void)?
     private var buttons: [NSButton] = []
     private let plus = iconButton("plus", tip: "New Tab (⌘T)", target: nil, action: #selector(newTab))
+    private let overflow = iconButton("chevron.down", tip: "Hidden tabs", target: nil, action: #selector(showOverflow))
+    /// The tabs sit in a clip view, so a scrolled tab never draws under the + or the chevron.
+    private let clip = FlippedView()
+    private var scrollX: CGFloat = 0
+    /// Set when the active tab or the titles change: the next layout scrolls the active tab into view.
+    /// A scroll by hand clears it, so the strip stays where Nic put it.
+    private var revealActive = true
+    private var lastWidth: CGFloat = 0
+    /// The tabs not fully in view, in strip order. The chevron's menu lists them.
+    private(set) var hiddenTabs: [Int] = []
 
     override init(frame: NSRect) {
         super.init(frame: frame)
         // More tabs than room: they stop at the strip's edge instead of drawing under the type filter.
         clipsToBounds = true
+        clip.clipsToBounds = true
+        addSubview(clip)
         plus.target = self
         addSubview(plus)
+        overflow.target = self
+        // Respond on press, as a pop-up button does: the menu opens on mouse down.
+        overflow.sendAction(on: .leftMouseDown)
+        overflow.setAccessibilityLabel("Hidden tabs")
+        overflow.isHidden = true
+        addSubview(overflow)
     }
 
     required init?(coder: NSCoder) { fatalError() }
@@ -55,8 +74,56 @@ final class TabStrip: FlippedView {
         (buttons.first?.attributedTitle.attribute(.font, at: 0, effectiveRange: nil) as? NSFont)?.pointSize
     }
 
+    /// For QA: the chevron shows, and the active tab is fully inside the visible part of the strip.
+    var overflowShown: Bool { !overflow.isHidden }
+    var activeTabInView: Bool {
+        guard buttons.indices.contains(active) else { return false }
+        let f = buttons[active].frame
+        return f.minX >= -0.5 && f.maxX <= clip.bounds.width + 0.5
+    }
+
     @objc private func clicked(_ b: NSButton) {
         if NSEvent.modifierFlags.contains(.option) || NSApp.currentEvent?.buttonNumber == 2 { onClose?(b.tag) } else { onSelect?(b.tag) }
+    }
+
+    /// The chevron's menu: 1 item per hidden tab, in strip order.
+    func overflowMenu() -> NSMenu {
+        let menu = NSMenu()
+        menu.autoenablesItems = false
+        for i in hiddenTabs where titles.indices.contains(i) {
+            let item = NSMenuItem(title: titles[i].singleLine, action: #selector(choseHidden(_:)), keyEquivalent: "")
+            item.target = self
+            item.tag = i
+            menu.addItem(item)
+        }
+        return menu
+    }
+
+    @objc private func showOverflow() {
+        let menu = overflowMenu()
+        guard !menu.items.isEmpty else { return }
+        // Opened from a run-loop block, not from inside the button's own tracking (swift.md: menus open late otherwise).
+        RunLoop.main.perform { [weak self] in
+            guard let self else { return }
+            menu.popUp(positioning: nil, at: NSPoint(x: self.overflow.frame.minX, y: self.overflow.frame.maxY + 2), in: self)
+        }
+    }
+
+    /// A tab chosen in the chevron's menu: selected, and scrolled into view by the next layout.
+    @objc func choseHidden(_ item: NSMenuItem) {
+        revealActive = true
+        onSelect?(item.tag)
+        needsLayout = true
+    }
+
+    override func scrollWheel(with event: NSEvent) {
+        guard !overflow.isHidden else { return super.scrollWheel(with: event) }
+        // A trackpad swipe sideways or a mouse wheel: both move the strip, 1:1 with the gesture.
+        let dx = abs(event.scrollingDeltaX) > abs(event.scrollingDeltaY) ? event.scrollingDeltaX : event.scrollingDeltaY
+        let step = event.hasPreciseScrollingDeltas ? dx : dx * 10
+        revealActive = false
+        scrollX -= step
+        needsLayout = true
     }
 
     private func rebuild() {
@@ -86,7 +153,7 @@ final class TabStrip: FlippedView {
                 .foregroundColor: isActive ? Theme.fg : Theme.muted,
             ])
             b.toolTip = "\(t)\nClick: show. ⌥-click: close."
-            addSubview(b)
+            clip.addSubview(b)
             return b
         }
         needsLayout = true
@@ -95,16 +162,42 @@ final class TabStrip: FlippedView {
     override func layout() {
         super.layout()
         // A margin around each tab and its name: 8 px from the pane's edge, 4 px above and below, 14 px each side of the name.
-        var x: CGFloat = 8
         let h = bounds.height
-        let maxW = max(60, min(Theme.listSize * 15, (bounds.width - 48) / CGFloat(max(1, buttons.count))))
-        for b in buttons {
-            let w = min(maxW, b.intrinsicContentSize.width + 28)
-            b.frame = NSRect(x: x, y: 4, width: w, height: h - 8)
-            x += w + 4
-        }
         let p = (h * 0.7).rounded()
-        plus.frame = NSRect(x: min(x + 4, bounds.width - p - 4), y: ((h - p) / 2).rounded(), width: p, height: p)
+        let maxW = max(60, min(Theme.listSize * 15, (bounds.width - 48) / CGFloat(max(1, buttons.count))))
+        let widths = buttons.map { min(maxW, $0.intrinsicContentSize.width + 28) }
+        let total = widths.reduce(0, +) + 4 * CGFloat(max(0, widths.count - 1))
+        if bounds.width != lastWidth { revealActive = true; lastWidth = bounds.width }
+        // Without overflow the + follows the last tab; with it, the + and the chevron hold the trailing edge.
+        let fits = 8 + total + 8 + p + 4 <= bounds.width
+        overflow.isHidden = fits
+        let room = fits ? bounds.width - 8 : max(0, bounds.width - 8 - (p + 4) * 2 - 4)
+        clip.frame = NSRect(x: 8, y: 0, width: room, height: h)
+        let maxScroll = max(0, total - room)
+        if fits { scrollX = 0 }
+        var starts: [CGFloat] = []
+        var x: CGFloat = 0
+        for w in widths { starts.append(x); x += w + 4 }
+        if !fits, revealActive, widths.indices.contains(active) {
+            let a = starts[active], b = a + widths[active]
+            if a < scrollX { scrollX = a } else if b > scrollX + room { scrollX = b - room }
+        }
+        scrollX = min(max(0, scrollX), maxScroll)
+        revealActive = false
+        hiddenTabs = []
+        for (i, b) in buttons.enumerated() {
+            let left = starts[i] - scrollX
+            b.frame = NSRect(x: left, y: 4, width: widths[i], height: h - 8)
+            if left < -0.5 || left + widths[i] > room + 0.5 { hiddenTabs.append(i) }
+        }
+        let py = ((h - p) / 2).rounded()
+        if fits {
+            plus.frame = NSRect(x: min(8 + x + 4, bounds.width - p - 4), y: py, width: p, height: p)
+        } else {
+            overflow.frame = NSRect(x: bounds.width - p - 4, y: py, width: p, height: p)
+            plus.frame = NSRect(x: bounds.width - (p + 4) * 2, y: py, width: p, height: p)
+            overflow.toolTip = Count.of(hiddenTabs.count, "hidden tab", "hidden tabs")
+        }
     }
 }
 
@@ -271,8 +364,8 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
         } else if contents.folders + contents.files == 0 {
             parts.append("0 items")
         } else {
-            if contents.folders > 0 { parts.append(contents.folders == 1 ? "1 folder" : "\(contents.folders.formatted()) folders") }
-            if contents.files > 0 { parts.append(contents.files == 1 ? "1 file" : "\(contents.files.formatted()) files") }
+            if contents.folders > 0 { parts.append(Count.of(contents.folders, "folder", "folders")) }
+            if contents.files > 0 { parts.append(Count.of(contents.files, "file", "files")) }
         }
         let font = Theme.listFont()
         let text = NSMutableAttributedString(string: parts.joined(separator: " · "), attributes: [.font: font, .foregroundColor: Theme.fg2])

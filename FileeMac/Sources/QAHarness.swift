@@ -467,6 +467,31 @@ final class QAHarness {
             record(step, ["clipboard": Clipboard.board.string(forType: .string) ?? ""])
             done()
 
+        case "addTabs":
+            // New tabs in 1 pane, as ⌘T opens them: the tab overflow (worst suite, 40 tabs).
+            let p = pane(step)
+            for _ in 0..<(step["count"] as? Int ?? 1) { p.newTab() }
+            p.container.layoutSubtreeIfNeeded()
+            record(step, ["tabs": p.tabs.count])
+            done()
+
+        case "tabOverflow":
+            // The chevron's menu of hidden tabs. "choose": "first" or "last" picks that item, as a click in the menu does.
+            let p = pane(step)
+            p.container.layoutSubtreeIfNeeded()
+            let menu = p.tabStrip.overflowMenu()
+            let listed = menu.items.map(\.tag)
+            var ok = listed == p.tabStrip.hiddenTabs && !listed.contains(p.activeTab)
+            var chosen = -1
+            if let pick = step["choose"] as? String {
+                let item = pick == "last" ? menu.items.last : menu.items.first
+                if let item { chosen = item.tag; p.tabStrip.choseHidden(item) } else { ok = false }
+                p.container.layoutSubtreeIfNeeded()
+                ok = ok && p.activeTab == chosen && p.tabStrip.activeTabInView && !p.tabStrip.hiddenTabs.contains(chosen)
+            }
+            record(step, ok: ok, ["listed": listed.count, "chosen": chosen, "activeTab": p.activeTab, "hidden": p.tabStrip.hiddenTabs.count])
+            done()
+
         case "touch":
             // A file that appears in the folder from outside Filee (Dropbox, a script): FSEvents reloads the pane.
             let path = (step["path"] as? String ?? "").expandingHome
@@ -528,7 +553,7 @@ final class QAHarness {
         }
         return ["widths": widths, "path": p.path, "selected": names(p.selectedItems), "visible": p.folderModel.visible.count,
                 "query": p.folderModel.query, "view": p.tab.view.rawValue, "activePane": wc.activePaneIndex,
-                "dual": wc.dualPane, "tabs": p.tabs.count, "count": p.countLabel.stringValue, "status": wc.toast.text,
+                "dual": wc.dualPane, "tabs": p.tabs.count, "activeTab": p.activeTab, "hiddenTabs": p.tabStrip.hiddenTabs.count, "count": p.countLabel.stringValue, "status": wc.toast.text,
                 "statusBar": wc.statusBar.left.stringValue, "message": p.messageLabel.isHidden ? "" : p.messageLabel.stringValue,
                 "favourites": wc.sidebar.favouritesOutline, "info": InfoPanel.shared.shownText]
     }
@@ -571,6 +596,9 @@ final class QAHarness {
         if let a = step["activePane"] as? Int { ok = ok && wc.activePaneIndex == a }
         if let d = step["dual"] as? Bool { ok = ok && wc.dualPane == d }
         if let t = step["tabs"] as? Int { ok = ok && p.tabs.count == t }
+        if let o = step["overflow"] as? Bool { p.container.layoutSubtreeIfNeeded(); ok = ok && p.tabStrip.overflowShown == o && p.tabStrip.hiddenTabs.isEmpty == !o }
+        if let v = step["activeTabInView"] as? Bool { ok = ok && p.tabStrip.activeTabInView == v }
+        if let a = step["activeTab"] as? Int { ok = ok && p.activeTab == a }
         if let q = step["query"] as? String { ok = ok && p.folderModel.query == q }
         if let c = step["contains"] as? [String: String] {
             for (file, text) in c {

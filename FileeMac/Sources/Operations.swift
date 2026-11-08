@@ -78,7 +78,7 @@ final class OperationCenter {
                     self.window?.showMessage(text, error: true)
                     panel?.finish(t, text: text, error: true)
                 } else if t.cancel.isCancelled {
-                    let text = "Cancelled after \(t.results.count) of \(sources.count)"
+                    let text = "Cancelled after \(t.results.count.formatted()) of \(sources.count.formatted())"
                     self.window?.showMessage(text)
                     panel?.finish(t, text: text, error: true)
                 } else {

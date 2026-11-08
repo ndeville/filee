@@ -141,7 +141,7 @@ final class RenameSheet: NSObject, NSTableViewDataSource, NSTableViewDelegate, N
         }
         table.reloadData()
         let problems = plan.entries.filter { $0.problem != nil }.count
-        summary.stringValue = problems > 0 ? "\(problems) problem\(problems == 1 ? "" : "s"): fix them to rename" : "\(plan.changedCount) of \(paths.count) will change"
+        summary.stringValue = problems > 0 ? "\(Count.of(problems, "problem", "problems")): fix \(problems == 1 ? "it" : "them") to rename" : "\(plan.changedCount.formatted()) of \(paths.count.formatted()) will change"
         summary.textColor = problems > 0 ? Theme.accentText : Theme.fg2
         renameButton.isEnabled = plan.isValid
     }

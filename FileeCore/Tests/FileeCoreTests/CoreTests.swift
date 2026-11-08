@@ -420,4 +420,14 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(Format.size(2 * 1024 * 1024 * 1024 * 1024), "2.00 TB")
         XCTAssertEqual(Format.date(1).prefix(4), "1970")
     }
+
+    func testCountPlurals() {
+        XCTAssertEqual(Count.of(0, "file", "files"), "0 files")
+        XCTAssertEqual(Count.of(1, "file", "files"), "1 file")
+        XCTAssertEqual(Count.of(2, "folder", "folders"), "2 folders")
+        XCTAssertEqual(Count.of(1284, "file", "files"), "\(1284.formatted()) files")
+        XCTAssertEqual(Format.items(1), "1 item")
+        XCTAssertEqual(Format.items(50_000), "\(50_000.formatted()) items")
+        XCTAssertEqual(UndoRecord.created(Array(repeating: "/tmp/x", count: 1200)).title, "Create \(1200.formatted()) Items")
+    }
 }

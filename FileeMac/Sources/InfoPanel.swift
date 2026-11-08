@@ -47,7 +47,7 @@ final class InfoPanel: NSObject {
         token.cancel()
         token = CancelToken()
         values = [:]
-        title = items.count == 1 ? items[0].name : "\(items.count.formatted()) items"
+        title = items.count == 1 ? items[0].name : Format.items(items.count)
         if items.count == 1 { fillOne(items[0]) } else { fillMany(items) }
         render()
         if !panel.isVisible {

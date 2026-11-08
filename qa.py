@@ -721,6 +721,24 @@ def worst_suite(fx: dict) -> list:
         # SPEC 1.3 sets 120 MB for 2 panes and 4 tabs; this home has 19 tabs and just selected 50,000 files (about 120 MB).
         {"op": "expect", "label": "memory under 150 MB after the 50,000-file folder, 19 tabs", "memoryBelowMB": 150},
     ]
+    # Tab overflow: pane 2 holds 15 tabs, then 40. The chevron lists the hidden tabs; choosing one selects it and scrolls it into view.
+    steps += [
+        {"op": "expect", "label": "4 tabs fit: no chevron", "pane": 0, "overflow": False},
+        {"op": "expect", "label": "15 tabs: the chevron shows and the active (last) tab is in view", "pane": 1,
+         "overflow": True, "activeTab": 14, "activeTabInView": True},
+        {"op": "addTabs", "pane": 1, "count": 25},
+        {"op": "expect", "label": "40 tabs: the new last tab is active and in view", "pane": 1,
+         "tabs": 40, "overflow": True, "activeTab": 39, "activeTabInView": True},
+        {"op": "tabOverflow", "pane": 1, "label": "the chevron's menu lists exactly the hidden tabs, not the active one"},
+        {"op": "tabOverflow", "pane": 1, "choose": "first", "label": "choosing the 1st hidden tab selects tab 1 and scrolls it into view"},
+        {"op": "expect", "label": "tab 1 active and in view", "pane": 1, "activeTab": 0, "activeTabInView": True},
+        {"op": "screenshot", "name": "tabs-40-first-light"},
+        {"op": "tabOverflow", "pane": 1, "choose": "last", "label": "choosing the last hidden tab selects tab 40 and scrolls it into view"},
+        {"op": "expect", "label": "tab 40 active and in view", "pane": 1, "activeTab": 39, "activeTabInView": True},
+        {"op": "theme", "theme": "dark"},
+        {"op": "screenshot", "name": "tabs-40-last-dark"},
+        {"op": "theme", "theme": "light"},
+    ]
     for size, width, height in WORST_SIZES:
         steps.append({"op": "window", "width": width, "height": height})
         for theme in ("light", "dark"):
@@ -976,7 +994,7 @@ def main():
             if s.get("op") == "measureScroll":
                 print(f"   📏 scroll {s.get('rows')} rows, {s.get('pages')} frames of {s.get('rows_per_frame')} rows: p50 {s.get('p50_ms')} ms, p95 {s.get('p95_ms')} ms, max {s.get('max_ms')} ms")
         print(f"   📁 {out}")
-    print(f"\n{'✅ All suites passed' if total_fail == 0 else f'❌ {total_fail} failure(s)'}")
+    print(f"\n{'✅ All suites passed' if total_fail == 0 else f'❌ {total_fail:,} failure' + ('' if total_fail == 1 else 's')}")
     sys.exit(1 if total_fail else 0)
 
 

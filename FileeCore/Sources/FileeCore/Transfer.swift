@@ -22,9 +22,9 @@ public enum UndoRecord: Sendable, Equatable {
 
     public var title: String {
         switch self {
-        case .moved(let p): return p.count == 1 ? "Move" : "Move \(p.count) Items"
-        case .created(let p): return p.count == 1 ? "Create" : "Create \(p.count) Items"
-        case .trashed(let p): return p.count == 1 ? "Move to Trash" : "Move \(p.count) Items to Trash"
+        case .moved(let p): return p.count == 1 ? "Move" : "Move \(Count.of(p.count, "Item", "Items"))"
+        case .created(let p): return p.count == 1 ? "Create" : "Create \(Count.of(p.count, "Item", "Items"))"
+        case .trashed(let p): return p.count == 1 ? "Move to Trash" : "Move \(Count.of(p.count, "Item", "Items")) to Trash"
         case .group(let r): return r.first?.title ?? "Change"
         }
     }
