@@ -288,6 +288,9 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(Renamer.plan(p, mode: .prefixDate, dateOf: { _ in d }).entries[0].newName, "260102-Café Menu_Final.PDF")
         touch("o/261010-already.md")
         XCTAssertEqual(Renamer.plan([path("o/261010-already.md")], mode: .prefixDate, dateOf: { _ in d }).entries[0].newName, "261010-already.md")
+        let today = Renamer.yymmdd(Date())
+        XCTAssertEqual(Renamer.plan(p, mode: .prefixToday, dateOf: { _ in d }).entries[0].newName, "\(today)-Café Menu_Final.PDF")
+        XCTAssertEqual(Renamer.plan([path("o/261010-already.md")], mode: .prefixToday).entries[0].newName, "261010-already.md")
     }
 
     // MARK: Archive

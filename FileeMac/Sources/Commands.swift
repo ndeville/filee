@@ -82,6 +82,7 @@ enum CommandCatalog {
         .init(id: "moveToOther", title: "Move to Other Pane", key: "f6", args: nil),
         .init(id: "rename", title: "Rename…", key: "cmd+r", args: nil),
         .init(id: "batchRename", title: "Batch Rename…", key: nil, args: nil),
+        .init(id: "prefixToday", title: "Add Today's Date (YYMMDD-)", key: nil, args: nil),
         .init(id: "newFolder", title: "New Folder", key: "shift+cmd+n", args: nil),
         .init(id: "newFolderWithSelection", title: "New Folder with Selection", key: nil, args: nil),
         .init(id: "newFile", title: "New Text File", key: "alt+cmd+n", args: nil),

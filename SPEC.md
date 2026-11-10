@@ -217,6 +217,7 @@ Vim keys (`hjkl`) are off and available as a setting (decision 19).
 | Sequence        | 1 base name for all: `261008-world-summit-ai` gives `261008-world-summit-ai_01.jpg`, `_02` ... |
 | Find and replace | Plain text or regex, case sensitive or not                                                   |
 | Prefix date     | Insert `YYMMDD-` from the capture date                                                       |
+| Prefix today    | Insert `YYMMDD-` from today's date                                                           |
 | Slugify         | Lower case, accents removed, spaces and `_` to `-`                                           |
 | Case            | lower, UPPER, Title                                                                          |
 
@@ -227,6 +228,8 @@ Sequence rules:
 - Extensions stay as they are.
 - 1 selected file gets no number.
 - `YYMMDD` in the base name is replaced with each file's capture date: EXIF `DateTimeOriginal` for photos, else the creation date. A typed date stays as typed.
+
+**Add Today's Date (YYMMDD-)** (context menu, **File** menu, palette, no default key) renames the selection at once, without the sheet: `notes.md` becomes `261110-notes.md`. A name that already starts with 6 digits and `-`, `_` or a space keeps its date. A conflict opens the sheet in the "Prefix today" mode to show it.
 
 Renames run in 2 steps through temporary names, so swaps (`a`→`b`, `b`→`a`) work. 1 undo step reverts the whole batch.
 

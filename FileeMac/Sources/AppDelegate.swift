@@ -453,7 +453,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             cmd("New Window", "newWindow"), cmd("New Tab", "newTab"), cmd("New Folder", "newFolder"),
             cmd("New Folder with Selection", "newFolderWithSelection"), cmd("New Text File", "newFile"), sep(),
             cmd("Open", "open"), cmd("Open With…", "openWith"), cmd("Quick Look", "quickLook"), cmd("Get Info", "info"), sep(),
-            cmd("Rename…", "rename"), cmd("Batch Rename…", "batchRename"), cmd("Duplicate", "duplicate"), cmd("Make Symbolic Link", "makeSymlink"),
+            cmd("Rename…", "rename"), cmd("Batch Rename…", "batchRename"), cmd("Add Today's Date (YYMMDD-)", "prefixToday"), cmd("Duplicate", "duplicate"), cmd("Make Symbolic Link", "makeSymlink"),
             cmd("Compress to Zip", "compress"), cmd("Extract Zip Here", "extract"), sep(),
             cmd("Move to Trash", "trash"), cmd("Empty Trash…", "emptyTrash"), cmd("Eject", "eject"), sep(),
             cmd("Close Tab", "closeTab"),

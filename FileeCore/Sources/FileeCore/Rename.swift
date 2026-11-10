@@ -8,6 +8,8 @@ public enum RenameMode: Equatable, Sendable {
     case replace(find: String, with: String, regex: Bool, caseSensitive: Bool)
     /// "YYMMDD-" before the name, from the capture date. Names that already start with 6 digits and "-" are left.
     case prefixDate
+    /// "YYMMDD-" from today's date. Names that already start with 6 digits and "-" are left.
+    case prefixToday
     case slugify
     case lower, upper, title
 }
@@ -53,9 +55,9 @@ public enum Renamer {
                 newStem = paths.count == 1 ? dated : dated + "_" + String(format: "%0\(width)d", i + 1)
             case .replace(let find, let with, let regex, let sensitive):
                 newStem = replace(stem, find: find, with: with, regex: regex, caseSensitive: sensitive)
-            case .prefixDate:
+            case .prefixDate, .prefixToday:
                 if stem.range(of: #"^\d{6}[-_ ]"#, options: .regularExpression) == nil {
-                    newStem = yymmdd(dateOf(path)) + "-" + stem
+                    newStem = yymmdd(mode == .prefixToday ? Date() : dateOf(path)) + "-" + stem
                 }
             case .slugify:
                 newStem = slug(stem)

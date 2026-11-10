@@ -20,10 +20,14 @@ final class RenameSheet: NSObject, NSTableViewDataSource, NSTableViewDelegate, N
     private var plan = RenamePlan(entries: [])
     private var dates: [String: Date?] = [:]
 
-    static let modes = ["Sequence", "Find and replace", "Prefix date (YYMMDD-)", "Slugify", "lower case", "UPPER CASE", "Title Case"]
+    static let modes = ["Sequence", "Find and replace", "Prefix capture date (YYMMDD-)", "Prefix today's date (YYMMDD-)", "Slugify", "lower case", "UPPER CASE", "Title Case"]
 
-    static func show(for paths: [String], in browser: BrowserWindowController) {
+    static func show(for paths: [String], in browser: BrowserWindowController, mode: RenameMode? = nil) {
         let s = RenameSheet(paths: paths, browser: browser)
+        if mode == .prefixToday {
+            s.modePopup.selectItem(at: 3)
+            s.modeChanged()
+        }
         current = s
         browser.window?.beginSheet(s.sheet) { _ in current = nil }
         s.sheet.makeFirstResponder(s.field1)
@@ -104,7 +108,8 @@ final class RenameSheet: NSObject, NSTableViewDataSource, NSTableViewDelegate, N
             field2.placeholderString = "Replace with"
             help.stringValue = "Acts on the name without the extension. With Regex, $1 inserts a group."
         case 2: help.stringValue = "Adds YYMMDD- from the capture date. Names that already start with 6 digits are left as they are."
-        case 3: help.stringValue = "Lower case, accents removed, spaces and _ become -."
+        case 3: help.stringValue = "Adds YYMMDD- with today's date. Names that already start with 6 digits are left as they are."
+        case 4: help.stringValue = "Lower case, accents removed, spaces and _ become -."
         default: help.stringValue = "Changes the case of the name, not the extension."
         }
         update()
@@ -119,9 +124,10 @@ final class RenameSheet: NSObject, NSTableViewDataSource, NSTableViewDelegate, N
         case 0: return .sequence(base: field1.stringValue)
         case 1: return .replace(find: field1.stringValue, with: field2.stringValue, regex: regexBox.state == .on, caseSensitive: caseBox.state == .on)
         case 2: return .prefixDate
-        case 3: return .slugify
-        case 4: return .lower
-        case 5: return .upper
+        case 3: return .prefixToday
+        case 4: return .slugify
+        case 5: return .lower
+        case 6: return .upper
         default: return .title
         }
     }

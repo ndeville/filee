@@ -392,6 +392,18 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
             let sel = pane.selectedItems
             guard !sel.isEmpty else { return beep() }
             RenameSheet.show(for: sel.map(\.path), in: self)
+        case "prefixToday":
+            // No sheet: renames at once, 1 undo step. A conflict opens the sheet to show it.
+            let sel = pane.selectedItems
+            guard !sel.isEmpty else { return beep() }
+            let plan = Renamer.plan(sel.map(\.path), mode: .prefixToday)
+            if plan.changedCount == 0 {
+                showMessage("Already dated: \(sel.count == 1 ? "the name starts" : "every name starts") with YYMMDD-")
+            } else if !plan.isValid {
+                RenameSheet.show(for: sel.map(\.path), in: self, mode: .prefixToday)
+            } else {
+                selectInPanes(ops.apply(plan))
+            }
         case "newFolder":
             // Next to the selected item: in a tree list, that can be inside an expanded folder.
             if let p = ops.newFolder(in: pane.selectedItems.first?.parent ?? pane.targetFolder) { selectAndRename(p, in: pane) }
@@ -795,6 +807,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         add("Get Info", "info")
         menu.addItem(.separator())
         add(items.count == 1 ? "Rename…" : "Batch Rename…", items.count == 1 ? "rename" : "batchRename")
+        add("Add Today's Date (YYMMDD-)", "prefixToday")
         add("Duplicate", "duplicate")
         add("Copy to Other Pane", "copyToOther")
         add("Move to Other Pane", "moveToOther")
