@@ -231,6 +231,8 @@ Sequence rules:
 
 **Add Today's Date (YYMMDD-)** (context menu, **File** menu, palette, no default key) renames the selection at once, without the sheet: `notes.md` becomes `261110-notes.md`. A name that already starts with 6 digits and `-`, `_` or a space keeps its date. A conflict opens the sheet in the "Prefix today" mode to show it.
 
+**Slugify Names** (same places, no default key) works the same way with the Slugify rules: `Café Menu_Final.PDF` becomes `cafe-menu-final.PDF`. The extension keeps its case. A name that is a slug already stays as it is.
+
 Renames run in 2 steps through temporary names, so swaps (`a`→`b`, `b`→`a`) work. 1 undo step reverts the whole batch.
 
 ### 5.3 Archives (decision 26)

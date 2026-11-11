@@ -24,8 +24,8 @@ final class RenameSheet: NSObject, NSTableViewDataSource, NSTableViewDelegate, N
 
     static func show(for paths: [String], in browser: BrowserWindowController, mode: RenameMode? = nil) {
         let s = RenameSheet(paths: paths, browser: browser)
-        if mode == .prefixToday {
-            s.modePopup.selectItem(at: 3)
+        if let i = mode == .prefixToday ? 3 : mode == .slugify ? 4 : nil {
+            s.modePopup.selectItem(at: i)
             s.modeChanged()
         }
         current = s
