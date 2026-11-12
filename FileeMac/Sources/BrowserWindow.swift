@@ -345,6 +345,9 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
             guard let f = pane.selectedItems.first(where: \.isFolder) else { return beep() }
             pane.newTab(path: f.path)
         case "pasteHere": paste(nil)
+        case "pasteIntoFolder":
+            guard let folder = pane.selectedItems.first?.path else { return false }
+            pasteInto(folder)
         case "cut": cut(nil)
         case "copy": copy(nil)
         case "cutEmpty", "copyEmpty": beepVoid()
@@ -792,6 +795,20 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         NSSound.beep()
     }
 
+    /// Paste's minimal variant for "right-clicked this 1 folder specifically": same clipboard reading
+    /// and cut/copy move-vs-copy detection as `paste(_:)`, but the destination is the given folder, not
+    /// `activePane.targetFolder`. Deliberately doesn't carry over `paste(_:)`'s path-text-navigation
+    /// fallback — that's a convenience for "nothing to paste" in the pane's own context, not something
+    /// a Paste on a specific folder needs.
+    private func pasteInto(_ folder: String) {
+        let pb = Clipboard.board
+        let urls = (pb.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL]) ?? []
+        guard !urls.isEmpty else { return NSSound.beep() }
+        let move = !cutPaths.isEmpty && pb.changeCount == cutChangeCount && Set(urls.map(\.path)) == Set(cutPaths)
+        OperationCenter.shared.transfer(move ? .move : .copy, urls.map(\.path), into: folder) { [weak self] r in self?.selectInPanes(r) }
+        if move { cutPaths = [] }
+    }
+
     @objc override func selectAll(_ sender: Any?) {
         perform("selectAll")
     }
@@ -839,7 +856,14 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         }
         add("Cut", "cut")
         add("Copy", "copy")
-        add("Paste", "pasteHere")
+        if items.count == 1, items[0].isFolder {
+            // Windows Explorer parity: right-clicking a folder specifically and choosing Paste pastes
+            // INTO that folder, not beside it at the pane's current root (that's what "pasteHere" does,
+            // and every other context — Edit menu, ⌘F, empty space, multi-selection — keeps using it).
+            add("Paste", "pasteIntoFolder")
+        } else {
+            add("Paste", "pasteHere")
+        }
         menu.addItem(.separator())
         let newItem = NSMenuItem(title: "New", action: nil, keyEquivalent: "")
         newItem.submenu = newSubmenu(for: pane)
@@ -848,7 +872,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         add("Get Info", "info")
         menu.addItem(.separator())
         add(items.count == 1 ? "Rename…" : "Batch Rename…", items.count == 1 ? "rename" : "batchRename")
-        let allImages = !files.isEmpty && files.allSatisfy { Self.imageExts.contains($0.ext) }
+        let allImages = !files.isEmpty && files.count == items.count && files.allSatisfy { Self.imageExts.contains($0.ext) }
         if allImages {
             add("Convert to JPEG" + (files.count > 1 ? " (\(files.count) files)" : ""), "convertToJPEG")
             add("Create PDF from Selection", "createPDF")

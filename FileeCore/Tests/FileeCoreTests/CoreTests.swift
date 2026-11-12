@@ -328,19 +328,45 @@ final class CoreTests: XCTestCase {
     // MARK: Image conversion
 
     func testConvertToJPEGKeepsOriginalAndMakesAReadableJPEG() throws {
-        // A real 2x2 PNG, not just arbitrary bytes, so ImageIO can decode it.
+        // A real 8x8 PNG, not just arbitrary bytes, so ImageIO can decode it. (Not 2x2: a probe showed
+        // JPEG-encoding something that tiny doesn't round-trip on this platform — CGImageDestinationFinalize
+        // returns true, but the written bytes have no decodable pixel data — which is a genuine encoder
+        // limit unrelated to corruption, so the fixture needs to be large enough to round-trip for real.)
         let png = Data(base64Encoded:
-            "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAEElEQVR4AQEEAAH/AP8AAAAyAAFmrUGdAAAAAElFTkSuQmCC")!
+            "iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAEUlEQVR4nGM4YWSEFTEMLQkAc/tLAZi7j8gAAAAASUVORK5CYII=")!
         try png.write(to: URL(fileURLWithPath: path("pixel.png")))
         let out = try ImageConvert.toJPEG(path("pixel.png"))
         XCTAssertEqual((out as NSString).pathExtension, "jpg")
         XCTAssertTrue(fm.fileExists(atPath: path("pixel.png")), "the original stays")
-        XCTAssertTrue(fm.fileExists(atPath: out))
+        // Actually readable, not just present: this is the exact gap that let a broken JPEG pass before.
+        let outSource = CGImageSourceCreateWithURL(URL(fileURLWithPath: out) as CFURL, nil)!
+        XCTAssertNotNil(CGImageSourceCreateImageAtIndex(outSource, 0, nil), "the output must actually decode")
+        let props = CGImageSourceCopyPropertiesAtIndex(outSource, 0, nil) as? [CFString: Any]
+        XCTAssertEqual((props?[kCGImagePropertyPixelWidth] as? NSNumber)?.intValue, 8)
+        XCTAssertEqual((props?[kCGImagePropertyPixelHeight] as? NSNumber)?.intValue, 8)
     }
 
     func testConvertToJPEGRefusesAnUnreadableFile() {
         touch("not-an-image.png", "not actually a png")
         XCTAssertThrowsError(try ImageConvert.toJPEG(path("not-an-image.png")))
+    }
+
+    func testConvertToJPEGRefusesATruncatedImage() throws {
+        // The same real PNG fixture as testConvertToJPEGKeepsOriginalAndMakesAReadableJPEG, but with only
+        // part of its bytes written to disk — this is what a truncated/corrupt HEIC or PNG looks like on
+        // disk. A probe against this exact fixture (CGImageSourceGetCount, then
+        // CGImageDestinationAddImageFromSource + CGImageDestinationFinalize, exactly as toJPEG does)
+        // confirmed CGImageSourceGetCount(source) > 0 (ImageIO is willing to say "yes, 1 image" from the
+        // truncated header alone) AND CGImageDestinationFinalize returns true anyway — while the bytes it
+        // wrote are a broken, unreadable "JPEG" with no pixel dimensions when re-opened. Neither of those
+        // 2 checks alone (both present in the old code) catches this; only re-opening the written output
+        // and requiring real pixel dimensions does.
+        let png = Data(base64Encoded:
+            "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAEElEQVR4AQEEAAH/AP8AAAAyAAFmrUGdAAAAAElFTkSuQmCC")!
+        let truncated = png.prefix(png.count * 2 / 3)
+        try truncated.write(to: URL(fileURLWithPath: path("truncated.png")))
+        XCTAssertThrowsError(try ImageConvert.toJPEG(path("truncated.png")))
+        XCTAssertFalse(fm.fileExists(atPath: path("truncated.jpg")), "no partial/broken .jpg must be left behind")
     }
 
     func testConvertToJPEGPreservesEXIFOrientation() throws {
