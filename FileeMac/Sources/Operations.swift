@@ -306,6 +306,28 @@ final class OperationCenter {
         }
     }
 
+    func convertToJPEG(_ paths: [String], completion: @escaping ([String]) -> Void) {
+        guard !paths.isEmpty, !refuseIfReadOnly() else { return }
+        window?.showMessage("Converting \(Format.items(paths.count))…")
+        queue.async { [weak self] in
+            var out: [String] = []
+            var errors: [String] = []
+            for p in paths {
+                do { out.append(try ImageConvert.toJPEG(p)) } catch { errors.append(error.localizedDescription) }
+            }
+            DispatchQueue.main.async {
+                if !out.isEmpty { self?.undoStack.push(.created(out)) }
+                if errors.isEmpty {
+                    self?.window?.showMessage("✅ Converted \(Format.items(out.count))")
+                } else {
+                    self?.window?.showMessage("❌ " + errors.prefix(2).joined(separator: " · "), error: true)
+                }
+                self?.touched(paths.map { ($0 as NSString).deletingLastPathComponent })
+                completion(out)
+            }
+        }
+    }
+
     // MARK: Undo
 
     func undo() -> [String]? {

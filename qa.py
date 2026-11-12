@@ -475,6 +475,13 @@ def suites(fx: dict) -> dict:
             {"op": "command", "id": "newExcelDoc"},
             {"op": "key", "keys": "escape"},
             {"op": "expect", "label": "New Excel Spreadsheet from the template", "exists": A + "/New Spreadsheet.xlsx"},
+            {"op": "select", "pane": 0, "names": ["IMG01.png"]},
+            {"op": "expect", "label": "Convert to JPEG shows for an image", "menuContains": ["Convert to JPEG"]},
+            {"op": "command", "id": "convertToJPEG"},
+            {"op": "waitIdle"},
+            {"op": "expect", "label": "Convert to JPEG writes a .jpg next to the original", "exists": [A + "/IMG01.png", A + "/IMG01.jpg"]},
+            {"op": "select", "pane": 0, "names": ["alpha.txt"]},
+            {"op": "expect", "label": "Convert to JPEG does not show for a text file", "menuExcludes": ["Convert to JPEG"]},
             {"op": "screenshot", "name": "06-after-ops"},
         ],
         "rename": [

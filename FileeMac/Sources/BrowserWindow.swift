@@ -79,6 +79,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     private let sidebarHandle = ResizeHandle()
     private(set) var sidebarWidth: CGFloat = 260
     static let sidebarWidths: ClosedRange<CGFloat> = 160...480
+    static let imageExts: Set<String> = ["jpg", "jpeg", "png", "heic"]
     var palette: PaletteController?
 
     var activePane: PaneController { panes[activePaneIndex] }
@@ -448,6 +449,10 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
             let zips = pane.selectedItems.filter { $0.ext == "zip" }.map(\.path)
             guard !zips.isEmpty else { return beep() }
             ops.extract(zips) { [weak self] out in self?.selectInPanes(out) }
+        case "convertToJPEG":
+            let imgs = pane.selectedItems.filter { Self.imageExts.contains($0.ext) }.map(\.path)
+            guard !imgs.isEmpty else { return beep() }
+            ops.convertToJPEG(imgs) { [weak self] out in self?.selectInPanes(out) }
         case "copyPath": copyText(pane.selectedOrFolder.map(\.path).joined(separator: "\n"), what: "path")
         case "copyTildePath": copyText(pane.selectedOrFolder.map { $0.path.abbreviatingHome }.joined(separator: "\n"), what: "path")
         case "copyName": copyText(pane.selectedOrFolder.map(\.name).joined(separator: "\n"), what: "name")
@@ -839,6 +844,10 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         add("Get Info", "info")
         menu.addItem(.separator())
         add(items.count == 1 ? "Rename…" : "Batch Rename…", items.count == 1 ? "rename" : "batchRename")
+        let allImages = !files.isEmpty && files.allSatisfy { Self.imageExts.contains($0.ext) }
+        if allImages {
+            add("Convert to JPEG" + (files.count > 1 ? " (\(files.count) files)" : ""), "convertToJPEG")
+        }
         add("Add Today's Date (YYMMDD-)", "prefixToday")
         add("Slugify Names", "slugifyNames")
         add("Duplicate", "duplicate")

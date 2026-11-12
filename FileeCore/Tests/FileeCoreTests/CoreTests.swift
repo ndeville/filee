@@ -323,6 +323,24 @@ final class CoreTests: XCTestCase {
         XCTAssertTrue(fm.fileExists(atPath: (outMulti as NSString).appendingPathComponent("one.txt")))
     }
 
+    // MARK: Image conversion
+
+    func testConvertToJPEGKeepsOriginalAndMakesAReadableJPEG() throws {
+        // A real 2x2 PNG, not just arbitrary bytes, so ImageIO can decode it.
+        let png = Data(base64Encoded:
+            "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAEElEQVR4AQEEAAH/AP8AAAAyAAFmrUGdAAAAAElFTkSuQmCC")!
+        try png.write(to: URL(fileURLWithPath: path("pixel.png")))
+        let out = try ImageConvert.toJPEG(path("pixel.png"))
+        XCTAssertEqual((out as NSString).pathExtension, "jpg")
+        XCTAssertTrue(fm.fileExists(atPath: path("pixel.png")), "the original stays")
+        XCTAssertTrue(fm.fileExists(atPath: out))
+    }
+
+    func testConvertToJPEGRefusesAnUnreadableFile() {
+        touch("not-an-image.png", "not actually a png")
+        XCTAssertThrowsError(try ImageConvert.toJPEG(path("not-an-image.png")))
+    }
+
     // MARK: Actions and config
 
     func testActionExpansion() {
