@@ -8,9 +8,16 @@ public enum PDFBuilder {
         guard let first = paths.first else { throw OperationError.failed("Create PDF", "nothing selected") }
         let folder = (first as NSString).deletingLastPathComponent
         let base = paths.count == 1 ? ((first as NSString).lastPathComponent as NSString).deletingPathExtension + ".pdf" : "Document.pdf"
-        let dest = (folder as NSString).appendingPathComponent(FileOps.uniqueName(base, in: folder))
-        guard let context = CGContext(URL(fileURLWithPath: dest) as CFURL, mediaBox: nil, nil) else {
-            throw OperationError.failed("Create PDF", "can't create \(dest)")
+        // Write to a private temp file first, not straight to the real destination: CGContext opens
+        // the file for writing immediately, before any page is drawn, so if a later image in the
+        // selection turns out to be unreadable and this throws partway through the loop below, a
+        // broken, misleadingly-named partial file would otherwise be left sitting in the user's folder
+        // with no undo entry (no path is ever returned on failure). Only move it into place, under a
+        // name computed fresh against the folder's current contents, once every page has succeeded.
+        let tempPath = (NSTemporaryDirectory() as NSString).appendingPathComponent("filee-pdf-\(UUID().uuidString).pdf")
+        defer { try? FileManager.default.removeItem(atPath: tempPath) }
+        guard let context = CGContext(URL(fileURLWithPath: tempPath) as CFURL, mediaBox: nil, nil) else {
+            throw OperationError.failed("Create PDF", "can't create a PDF")
         }
         for p in paths {
             // CGImageSourceCreateImageAtIndex decodes raw pixels and ignores EXIF/TIFF orientation; a
@@ -35,6 +42,8 @@ public enum PDFBuilder {
             context.endPage()
         }
         context.closePDF()
+        let dest = (folder as NSString).appendingPathComponent(FileOps.uniqueName(base, in: folder))
+        try FileManager.default.moveItem(atPath: tempPath, toPath: dest)
         return dest
     }
 }

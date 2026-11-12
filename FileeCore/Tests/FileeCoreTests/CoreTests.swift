@@ -417,6 +417,21 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(box.height, 4, "orientation must be baked in, not ignored")
     }
 
+    func testPDFFromImagesLeavesNoPartialFileOnFailure() throws {
+        // 1 good image followed by 1 unreadable "image" (garbage bytes with an image extension, same
+        // trick as testConvertToJPEGRefusesAnUnreadableFile). fromImages must throw partway through the
+        // page loop. Since the destination PDF is opened for writing before the loop runs, a naive
+        // implementation leaves a broken, misleadingly-named partial file (e.g. "Document.pdf") behind
+        // in the real folder — with no undo entry, since no path is ever returned to the caller.
+        let png = Data(base64Encoded:
+            "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAEElEQVR4AQEEAAH/AP8AAAAyAAFmrUGdAAAAAElFTkSuQmCC")!
+        try png.write(to: URL(fileURLWithPath: path("good.png")))
+        touch("bad.png", "not actually a png")
+        XCTAssertThrowsError(try PDFBuilder.fromImages([path("good.png"), path("bad.png")]))
+        let leftoverPDFs = try fm.contentsOfDirectory(atPath: root).filter { ($0 as NSString).pathExtension == "pdf" }
+        XCTAssertTrue(leftoverPDFs.isEmpty, "no partial PDF should be left behind on failure: found \(leftoverPDFs)")
+    }
+
     // MARK: Actions and config
 
     func testActionExpansion() {
