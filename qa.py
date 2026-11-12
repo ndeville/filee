@@ -344,6 +344,8 @@ def suites(fx: dict) -> dict:
             {"op": "navigate", "pane": 1, "path": B},
             {"op": "navigate", "pane": 0, "path": A},
             {"op": "select", "pane": 0, "names": ["alpha.txt"]},
+            {"op": "expect", "label": "today's file menu has Open but no Convert to JPEG yet",
+             "menuContains": ["Open", "Copy Path"], "menuExcludes": ["Convert to JPEG"]},
             {"op": "key", "keys": "f5"},
             {"op": "waitIdle"},
             {"op": "expect", "label": "F5 copies to the other pane", "exists": [B + "/alpha.txt", A + "/alpha.txt"]},

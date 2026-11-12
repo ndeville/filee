@@ -638,6 +638,14 @@ final class QAHarness {
                 ok = false
             }
         }
+        if let want = step["menuContains"] as? [String] {
+            let titles = wc.contextMenu(for: pane(step).selectedItems, in: pane(step)).items.map(\.title)
+            guard want.allSatisfy({ titles.contains($0) }) else { return false }
+        }
+        if let avoid = step["menuExcludes"] as? [String] {
+            let titles = wc.contextMenu(for: pane(step).selectedItems, in: pane(step)).items.map(\.title)
+            guard !avoid.contains(where: { titles.contains($0) }) else { return false }
+        }
         if let s = step["countContains"] as? [String] { ok = ok && s.allSatisfy { p.countLabel.stringValue.contains($0) } }
         if let s = step["stack"] as? Int { ok = ok && AppDelegate.shared.state.dropStack.count == s }
         if let n = step["transferRows"] as? Int { ok = ok && wc.transfers.rows.count == n && (n == 0 || wc.transfers.frame.height > 50) }
