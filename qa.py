@@ -366,6 +366,8 @@ def suites(fx: dict) -> dict:
             {"op": "command", "id": "copy"},
             {"op": "expect", "label": "the real Copy (on the actual selection) still works",
              "clipboard": A + "/alpha.txt", "statusContains": "Copied 1 item"},
+            {"op": "expect", "label": "New is a submenu, not 2 flat rows, in the file menu too",
+             "menuContains": ["New"], "menuExcludes": ["New Folder", "New Text File"]},
             {"op": "select", "pane": 0, "names": ["alpha.txt"]},
             {"op": "key", "keys": "f5"},
             {"op": "waitIdle"},

@@ -794,8 +794,9 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
             menu.addItem(it)
         }
         if items.isEmpty {
-            add("New Folder", "newFolder")
-            add("New Text File", "newFile")
+            let newItem = NSMenuItem(title: "New", action: nil, keyEquivalent: "")
+            newItem.submenu = newSubmenu(for: pane)
+            menu.addItem(newItem)
             add("Cut", "cutEmpty")
             add("Copy", "copyEmpty")
             add("Paste", "pasteHere")
@@ -817,6 +818,9 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         add("Copy", "copy")
         add("Paste", "pasteHere")
         menu.addItem(.separator())
+        let newItem = NSMenuItem(title: "New", action: nil, keyEquivalent: "")
+        newItem.submenu = newSubmenu(for: pane)
+        menu.addItem(newItem)
         add("Quick Look", "quickLook")
         add("Get Info", "info")
         menu.addItem(.separator())
@@ -840,6 +844,19 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         appendActions(to: menu, items: items)
         menu.addItem(.separator())
         add("Move to Trash", "trash")
+        return menu
+    }
+
+    private func newSubmenu(for pane: PaneController) -> NSMenu {
+        let menu = NSMenu()
+        func add(_ title: String, _ id: String) {
+            let it = NSMenuItem(title: title, action: #selector(runCommand(_:)), keyEquivalent: "")
+            it.target = self
+            it.representedObject = [id]
+            menu.addItem(it)
+        }
+        add("Folder", "newFolder")
+        add("Text File", "newFile")
         return menu
     }
 
