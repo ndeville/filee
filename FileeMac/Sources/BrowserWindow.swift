@@ -984,12 +984,19 @@ final class OpenWithMenu: NSMenu, NSMenuDelegate {
         for app in apps {
             let title = app == defaultApp ? "\(Self.name(app)) (default)" : Self.name(app)
             let item = ClosureMenuItem(title: title) {
+                if NSEvent.modifierFlags.contains(.option), let ext = files.first?.pathExtension, let type = UTType(filenameExtension: ext) {
+                    NSWorkspace.shared.setDefaultApplication(at: app, toOpen: type)
+                }
                 NSWorkspace.shared.open(files, withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
             }
             item.image = Icons.small(NSWorkspace.shared.icon(forFile: app.path), px: 32)
             item.representedObject = app
             addItem(item)
             if app == defaultApp && apps.count > 1 { addItem(.separator()) }
+        }
+        if let ext = files.first?.pathExtension, !ext.isEmpty {
+            addItem(.separator())
+            addItem(NSMenuItem(title: "⌥-click an app to always open .\(ext) with it", action: nil, keyEquivalent: ""))
         }
         if apps.isEmpty { addItem(NSMenuItem(title: "No app found", action: nil, keyEquivalent: "")) }
         addItem(.separator())
