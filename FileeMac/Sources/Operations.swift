@@ -237,6 +237,19 @@ final class OperationCenter {
         }
     }
 
+    func newFromTemplate(_ templateURL: URL, baseName: String, ext: String, in folder: String) -> String? {
+        guard !refuseIfReadOnly() else { return nil }
+        do {
+            let path = try FileOps.copyTemplate(templateURL, baseName: baseName, ext: ext, in: folder)
+            undoStack.push(.created([path]))
+            touched([folder])
+            return path
+        } catch {
+            window?.showMessage("❌ \(error.localizedDescription)", error: true)
+            return nil
+        }
+    }
+
     func makeSymlinks(_ paths: [String], in folder: String) {
         guard !refuseIfReadOnly() else { return }
         var made: [String] = []

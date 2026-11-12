@@ -278,4 +278,11 @@ public enum FileOps {
         guard fm.createFile(atPath: path, contents: Data()) else { throw OperationError.failed(n, "couldn't create the file") }
         return path
     }
+
+    public static func copyTemplate(_ templateURL: URL, baseName: String, ext: String, in folder: String) throws -> String {
+        let name = uniqueName("\(baseName).\(ext)", in: folder)
+        let dest = (folder as NSString).appendingPathComponent(name)
+        try fm.copyItem(at: templateURL, to: URL(fileURLWithPath: dest))
+        return dest
+    }
 }

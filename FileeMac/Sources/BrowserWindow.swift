@@ -421,6 +421,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
             if let p = ops.newFolder(in: first.parent, moving: sel.map(\.path)) { selectAndRename(p, in: pane) }
         case "newFile":
             if let p = ops.newFile(in: pane.targetFolder) { selectAndRename(p, in: pane) }
+        case "newWordDoc": newFromTemplate(ext: "docx", baseName: "New Document")
+        case "newExcelDoc": newFromTemplate(ext: "xlsx", baseName: "New Spreadsheet")
         case "duplicate":
             let sel = pane.selectedItems.map(\.path)
             guard !sel.isEmpty else { return beep() }
@@ -602,6 +604,18 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         }
         // With an item to position, AppKit keeps the menu on screen next to the row.
         menu.popUp(positioning: menu.items.first, at: at, in: content)
+    }
+
+    private func newFromTemplate(ext: String, baseName: String) {
+        guard let template = Bundle.main.url(forResource: "Blank", withExtension: ext, subdirectory: "Templates") else {
+            showMessage("❌ Template for .\(ext) not found", error: true)
+            return
+        }
+        let pane = activePane
+        let folder = pane.selectedItems.first?.parent ?? pane.targetFolder
+        if let p = OperationCenter.shared.newFromTemplate(template, baseName: baseName, ext: ext, in: folder) {
+            selectAndRename(p, in: pane)
+        }
     }
 
     /// Other… in Open With: any app, chosen in /Applications.
@@ -857,6 +871,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         }
         add("Folder", "newFolder")
         add("Text File", "newFile")
+        add("Word Document", "newWordDoc")
+        add("Excel Spreadsheet", "newExcelDoc")
         return menu
     }
 

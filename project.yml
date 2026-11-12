@@ -28,6 +28,9 @@ targets:
         buildPhase: resources
       - path: FileeMac/Resources/Logo.png
         buildPhase: resources
+      - path: FileeMac/Resources/Templates
+        type: folder
+        buildPhase: resources
     dependencies:
       - package: FileeCore
     entitlements:

@@ -142,6 +142,16 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(FileOps.uniqueName(".env", in: path("u")), ".env 2")
     }
 
+    func testCopyTemplateGetsAUniqueName() throws {
+        touch("Blank.docx", "pretend-zip-bytes")
+        let template = URL(fileURLWithPath: path("Blank.docx"))
+        let first = try FileOps.copyTemplate(template, baseName: "New Document", ext: "docx", in: root)
+        let second = try FileOps.copyTemplate(template, baseName: "New Document", ext: "docx", in: root)
+        XCTAssertEqual((first as NSString).lastPathComponent, "New Document.docx")
+        XCTAssertNotEqual(first, second)
+        XCTAssertEqual(try Data(contentsOf: URL(fileURLWithPath: second)), Data("pretend-zip-bytes".utf8))
+    }
+
     func testCopyWithProgressAndUndo() throws {
         touch("src/big.bin", String(repeating: "q", count: 3_000_000))
         touch("src/folder/x.txt", "x")
