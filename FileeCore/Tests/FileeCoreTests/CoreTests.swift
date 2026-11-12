@@ -1,3 +1,5 @@
+import CoreGraphics
+import ImageIO
 import XCTest
 @testable import FileeCore
 
@@ -339,6 +341,34 @@ final class CoreTests: XCTestCase {
     func testConvertToJPEGRefusesAnUnreadableFile() {
         touch("not-an-image.png", "not actually a png")
         XCTAssertThrowsError(try ImageConvert.toJPEG(path("not-an-image.png")))
+    }
+
+    func testConvertToJPEGPreservesEXIFOrientation() throws {
+        // Build a tiny JPEG fixture tagged with a non-default EXIF orientation (6 = rotated 90° CW),
+        // the way a real phone photo is stored: upright pixels, orientation metadata says how to
+        // display them. If conversion decodes to a plain CGImage and re-adds it (losing metadata),
+        // the output silently loses the tag; it must come back out the same as it went in.
+        let src = path("rotated.jpg")
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let context = CGContext(data: nil, width: 2, height: 2, bitsPerComponent: 8, bytesPerRow: 0,
+                                 space: colorSpace, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
+        context.setFillColor(CGColor(red: 1, green: 0, blue: 0, alpha: 1))
+        context.fill(CGRect(x: 0, y: 0, width: 2, height: 2))
+        let cgImage = context.makeImage()!
+        let fixtureDest = CGImageDestinationCreateWithURL(URL(fileURLWithPath: src) as CFURL, "public.jpeg" as CFString, 1, nil)!
+        CGImageDestinationAddImage(fixtureDest, cgImage, [kCGImagePropertyOrientation: 6] as CFDictionary)
+        XCTAssertTrue(CGImageDestinationFinalize(fixtureDest), "failed to write the orientation-6 fixture")
+
+        // Sanity-check the fixture actually carries orientation 6 before converting it.
+        let srcSource = CGImageSourceCreateWithURL(URL(fileURLWithPath: src) as CFURL, nil)!
+        let srcProps = CGImageSourceCopyPropertiesAtIndex(srcSource, 0, nil) as? [CFString: Any]
+        XCTAssertEqual((srcProps?[kCGImagePropertyOrientation] as? NSNumber)?.intValue, 6)
+
+        let out = try ImageConvert.toJPEG(src)
+        let outSource = CGImageSourceCreateWithURL(URL(fileURLWithPath: out) as CFURL, nil)!
+        let outProps = CGImageSourceCopyPropertiesAtIndex(outSource, 0, nil) as? [CFString: Any]
+        XCTAssertEqual((outProps?[kCGImagePropertyOrientation] as? NSNumber)?.intValue, 6,
+                        "orientation must be preserved, not silently dropped/normalized to 1")
     }
 
     // MARK: Actions and config
