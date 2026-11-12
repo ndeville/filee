@@ -74,7 +74,7 @@ def write_home(home: Path, fx: dict):
     home.mkdir(parents=True, exist_ok=True)
     settings = {"newTabPath": fx["A"], "jumps": {"k": fx["A"], "a": fx["B"]},
                 "favourites": [{"name": "A", "path": fx["A"]}, {"name": "B", "path": fx["B"]}],
-                "volumeIcons": {"Philips": fx["volumeLogo"]}}
+                "volumeIcons": {"Philips": fx["volumeLogo"]}, "terminalApp": "iTerm"}
     (home / "settings.json").write_text(json.dumps(settings, indent=2), encoding="utf-8")
     actions = [
         {"name": "Mark done", "command": ["/usr/bin/touch", "{path}.done"], "extensions": ["txt", "md"], "mode": "background", "key": "ctrl+cmd+m"},
@@ -346,6 +346,11 @@ def suites(fx: dict) -> dict:
             {"op": "select", "pane": 0, "names": ["alpha.txt"]},
             {"op": "expect", "label": "today's file menu has Open but no Convert to JPEG yet",
              "menuContains": ["Open", "Copy Path"], "menuExcludes": ["Convert to JPEG"]},
+            {"op": "expect", "label": "file menu offers Cut/Copy/Paste", "menuContains": ["Cut", "Copy", "Paste"]},
+            {"op": "select", "pane": 0, "names": []},
+            {"op": "expect", "label": "empty-space menu offers New, Open Terminal Here (not Ghostty by name) and Paste",
+             "menuContains": ["Paste"], "menuExcludes": ["Open Ghostty Here"]},
+            {"op": "select", "pane": 0, "names": ["alpha.txt"]},
             {"op": "key", "keys": "f5"},
             {"op": "waitIdle"},
             {"op": "expect", "label": "F5 copies to the other pane", "exists": [B + "/alpha.txt", A + "/alpha.txt"]},

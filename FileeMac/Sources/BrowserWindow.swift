@@ -344,6 +344,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
             guard let f = pane.selectedItems.first(where: \.isFolder) else { return beep() }
             pane.newTab(path: f.path)
         case "pasteHere": paste(nil)
+        case "cut": cut(nil)
+        case "copy": copy(nil)
         case "openInOtherPane":
             guard let f = pane.selectedItems.first(where: \.isFolder) else { return beep() }
             otherPane.navigate(to: f.path)
@@ -793,9 +795,11 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         if items.isEmpty {
             add("New Folder", "newFolder")
             add("New Text File", "newFile")
+            add("Cut", "cut")
+            add("Copy", "copy")
             add("Paste", "pasteHere")
             menu.addItem(.separator())
-            add("Open Ghostty Here", "terminalHere")
+            add("Open \(Theme.settings.terminalApp) Here", "terminalHere")
             add("Calculate Folder Sizes", "folderSizes")
             add("Reveal in Finder", "revealInFinder")
             appendActions(to: menu, items: [])
@@ -808,6 +812,10 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
             it.submenu = OpenWithMenu(files: files.map(\.url), browser: self)
             menu.addItem(it)
         }
+        add("Cut", "cut")
+        add("Copy", "copy")
+        add("Paste", "pasteHere")
+        menu.addItem(.separator())
         add("Quick Look", "quickLook")
         add("Get Info", "info")
         menu.addItem(.separator())
@@ -827,7 +835,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         add("Copy Name", "copyName")
         add("Make Symbolic Link", "makeSymlink")
         add("Reveal in Finder", "revealInFinder")
-        if items.count == 1, items[0].isFolder { add("Open Ghostty Here", "terminalHere") }
+        if items.count == 1, items[0].isFolder { add("Open \(Theme.settings.terminalApp) Here", "terminalHere") }
         appendActions(to: menu, items: items)
         menu.addItem(.separator())
         add("Move to Trash", "trash")
