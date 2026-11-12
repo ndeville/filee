@@ -371,6 +371,52 @@ final class CoreTests: XCTestCase {
                         "orientation must be preserved, not silently dropped/normalized to 1")
     }
 
+    // MARK: PDF from images
+
+    func testPDFFromImagesHas1PagePerImage() throws {
+        let png = Data(base64Encoded:
+            "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAEElEQVR4AQEEAAH/AP8AAAAyAAFmrUGdAAAAAElFTkSuQmCC")!
+        try png.write(to: URL(fileURLWithPath: path("a.png")))
+        try png.write(to: URL(fileURLWithPath: path("b.png")))
+        let pdf = try PDFBuilder.fromImages([path("a.png"), path("b.png")])
+        XCTAssertEqual((pdf as NSString).pathExtension, "pdf")
+        let doc = CGPDFDocument(URL(fileURLWithPath: pdf) as CFURL)
+        XCTAssertEqual(doc?.numberOfPages, 2)
+    }
+
+    func testPDFFromImagesHonorsEXIFOrientation() throws {
+        // Build a 4x2 (landscape) JPEG fixture tagged with orientation 6 (rotate 90° CW to display),
+        // the way a real phone photo is stored: raw pixels are landscape, but the tag says the photo
+        // is actually portrait. If PDFBuilder decoded the raw CGImage (losing the orientation tag,
+        // like CGImageSourceCreateImageAtIndex does) and drew that directly, the PDF page would come
+        // out landstape-shaped — wrong way round. Honoring the tag must flip the page to portrait.
+        let src = path("rotated.jpg")
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let context = CGContext(data: nil, width: 4, height: 2, bitsPerComponent: 8, bytesPerRow: 0,
+                                 space: colorSpace, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
+        context.setFillColor(CGColor(red: 1, green: 0, blue: 0, alpha: 1))
+        context.fill(CGRect(x: 0, y: 0, width: 4, height: 2))
+        let cgImage = context.makeImage()!
+        let fixtureDest = CGImageDestinationCreateWithURL(URL(fileURLWithPath: src) as CFURL, "public.jpeg" as CFString, 1, nil)!
+        CGImageDestinationAddImage(fixtureDest, cgImage, [kCGImagePropertyOrientation: 6] as CFDictionary)
+        XCTAssertTrue(CGImageDestinationFinalize(fixtureDest), "failed to write the orientation-6 fixture")
+
+        // Sanity-check the fixture: raw stored pixels are 4x2 (landscape), tagged orientation 6.
+        let srcSource = CGImageSourceCreateWithURL(URL(fileURLWithPath: src) as CFURL, nil)!
+        let srcProps = CGImageSourceCopyPropertiesAtIndex(srcSource, 0, nil) as? [CFString: Any]
+        XCTAssertEqual((srcProps?[kCGImagePropertyPixelWidth] as? NSNumber)?.intValue, 4)
+        XCTAssertEqual((srcProps?[kCGImagePropertyPixelHeight] as? NSNumber)?.intValue, 2)
+        XCTAssertEqual((srcProps?[kCGImagePropertyOrientation] as? NSNumber)?.intValue, 6)
+
+        let pdf = try PDFBuilder.fromImages([src])
+        let doc = CGPDFDocument(URL(fileURLWithPath: pdf) as CFURL)!
+        let page = doc.page(at: 1)!
+        let box = page.getBoxRect(.mediaBox)
+        // Orientation 6 swaps width/height on display: the raw 4x2 source must become a 2x4 page.
+        XCTAssertEqual(box.width, 2, "orientation must be baked in, not ignored")
+        XCTAssertEqual(box.height, 4, "orientation must be baked in, not ignored")
+    }
+
     // MARK: Actions and config
 
     func testActionExpansion() {

@@ -284,6 +284,26 @@ final class OperationCenter {
         }
     }
 
+    func createPDF(from paths: [String], completion: @escaping (String?) -> Void) {
+        guard !paths.isEmpty, !refuseIfReadOnly() else { return }
+        window?.showMessage("Creating PDF from \(Format.items(paths.count))…")
+        queue.async { [weak self] in
+            let result = Result { try PDFBuilder.fromImages(paths) }
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let pdf):
+                    self?.undoStack.push(.created([pdf]))
+                    self?.window?.showMessage("✅ \((pdf as NSString).lastPathComponent)")
+                    self?.touched([(pdf as NSString).deletingLastPathComponent])
+                    completion(pdf)
+                case .failure(let e):
+                    self?.window?.showMessage("❌ \(e.localizedDescription)", error: true)
+                    completion(nil)
+                }
+            }
+        }
+    }
+
     func extract(_ zips: [String], completion: @escaping ([String]) -> Void) {
         guard !zips.isEmpty, !refuseIfReadOnly() else { return }
         window?.showMessage("Extracting \(Format.items(zips.count))…")

@@ -453,6 +453,10 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
             let imgs = pane.selectedItems.filter { Self.imageExts.contains($0.ext) }.map(\.path)
             guard !imgs.isEmpty else { return beep() }
             ops.convertToJPEG(imgs) { [weak self] out in self?.selectInPanes(out) }
+        case "createPDF":
+            let imgsForPDF = pane.selectedItems.filter { Self.imageExts.contains($0.ext) }.map(\.path)
+            guard !imgsForPDF.isEmpty else { return beep() }
+            ops.createPDF(from: imgsForPDF) { [weak self] pdf in if let pdf { self?.selectInPanes([pdf]) } }
         case "copyPath": copyText(pane.selectedOrFolder.map(\.path).joined(separator: "\n"), what: "path")
         case "copyTildePath": copyText(pane.selectedOrFolder.map { $0.path.abbreviatingHome }.joined(separator: "\n"), what: "path")
         case "copyName": copyText(pane.selectedOrFolder.map(\.name).joined(separator: "\n"), what: "name")
@@ -847,6 +851,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         let allImages = !files.isEmpty && files.allSatisfy { Self.imageExts.contains($0.ext) }
         if allImages {
             add("Convert to JPEG" + (files.count > 1 ? " (\(files.count) files)" : ""), "convertToJPEG")
+            add("Create PDF from Selection", "createPDF")
         }
         add("Add Today's Date (YYMMDD-)", "prefixToday")
         add("Slugify Names", "slugifyNames")
