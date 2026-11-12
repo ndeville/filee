@@ -346,6 +346,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         case "pasteHere": paste(nil)
         case "cut": cut(nil)
         case "copy": copy(nil)
+        case "cutEmpty", "copyEmpty": beepVoid()
         case "openInOtherPane":
             guard let f = pane.selectedItems.first(where: \.isFolder) else { return beep() }
             otherPane.navigate(to: f.path)
@@ -795,8 +796,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         if items.isEmpty {
             add("New Folder", "newFolder")
             add("New Text File", "newFile")
-            add("Cut", "cut")
-            add("Copy", "copy")
+            add("Cut", "cutEmpty")
+            add("Copy", "copyEmpty")
             add("Paste", "pasteHere")
             menu.addItem(.separator())
             add("Open \(Theme.settings.terminalApp) Here", "terminalHere")

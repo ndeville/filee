@@ -350,6 +350,22 @@ def suites(fx: dict) -> dict:
             {"op": "select", "pane": 0, "names": []},
             {"op": "expect", "label": "empty-space menu offers New, Open Terminal Here (not Ghostty by name) and Paste",
              "menuContains": ["Paste"], "menuExcludes": ["Open Ghostty Here"]},
+            # The empty-space Cut/Copy rows must be real no-ops: a right-click on empty space doesn't clear a
+            # pane's existing selection (ListView.menu(for:)), so if they reused "cut"/"copy" they'd silently
+            # act on whatever was still selected.
+            {"op": "select", "pane": 0, "names": ["beta.md"]},
+            {"op": "command", "id": "copyPath"},
+            {"op": "expect", "label": "clipboard holds beta.md's path", "clipboard": A + "/beta.md"},
+            {"op": "select", "pane": 0, "names": ["alpha.txt"]},
+            {"op": "command", "id": "copyEmpty"},
+            {"op": "expect", "label": "the empty-space Copy row is a no-op: clipboard and selection are untouched",
+             "clipboard": A + "/beta.md", "selected": ["alpha.txt"]},
+            {"op": "command", "id": "cutEmpty"},
+            {"op": "expect", "label": "the empty-space Cut row is a no-op too: clipboard still untouched",
+             "clipboard": A + "/beta.md", "selected": ["alpha.txt"]},
+            {"op": "command", "id": "copy"},
+            {"op": "expect", "label": "the real Copy (on the actual selection) still works",
+             "clipboard": A + "/alpha.txt", "statusContains": "Copied 1 item"},
             {"op": "select", "pane": 0, "names": ["alpha.txt"]},
             {"op": "key", "keys": "f5"},
             {"op": "waitIdle"},
