@@ -7,6 +7,9 @@ on:
     branches: [main]
 
 jobs:
+  # The required status check (branch protection: "test"). Correctness only —
+  # no wall-clock performance budgets, which are tuned against Nic's own Mac
+  # and flake on a shared/noisier CI runner (see the "perf" job below).
   test:
     runs-on: macos-latest
     steps:
@@ -18,5 +21,27 @@ jobs:
       - name: Build and run FileeCore unit tests
         run: ./build.sh --test
 
-      - name: Run QA suite
-        run: python3 qa.py
+      - name: Run QA correctness suites
+        run: |
+          for suite in browse filter ops rename budgets cli; do
+            python3 qa.py --only "$suite"
+          done
+
+  # Informational only, not a required check: qa.py's "worst" suite includes
+  # wall-clock performance budgets (CLAUDE.md's measured numbers are from
+  # Nic's own Mac) that a shared CI runner can legitimately miss without any
+  # real regression. Reported here so a genuine slowdown is still visible.
+  perf:
+    runs-on: macos-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: brew install xcodegen librsvg
+
+      - name: Build
+        run: ./build.sh
+
+      - name: Run QA worst-case suite (performance budgets, informational)
+        run: python3 qa.py --only worst
