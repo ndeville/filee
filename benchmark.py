@@ -16,6 +16,9 @@ Finder is always running, so it has no launch time.
 Before each launch, ForkLift's saved windows (its "Windows" preference) are cleared: ForkLift reopens every tab of the
 earlier runs, and each run would list more folders than the one before.
 
+Path Finder and ForkLift (from Setapp) hang at launch, with no window and no menu bar, until Setapp's own daemon
+answers their license check: the script starts Setapp.app first when either is a Setapp install.
+
 Writes assets/benchmark/results.json and the README chart (assets/benchmark/benchmark-light.svg, -dark.svg).
 
     python3 benchmark.py              # 1 warm-up round and 5 measured rounds, about 5 minutes
@@ -363,11 +366,21 @@ def measure(app: dict, probe: Path, a: Path, b: Path) -> dict:
     return result
 
 
+def ensure_setapp_running(apps: list[dict]):
+    """Path Finder and ForkLift hang at launch (a semaphore wait in their license check) until Setapp's own
+    daemon is up: start it and give it a moment before measuring either."""
+    setapp = Path("/Applications/Setapp/Setapp.app")
+    if setapp.exists() and any(a["path"].startswith("/Applications/Setapp/") for a in apps):
+        subprocess.run(["/usr/bin/open", "-g", "-a", str(setapp)], capture_output=True)
+        time.sleep(3)
+
+
 def run_benchmark(runs: int) -> dict:
     WORK.mkdir(parents=True, exist_ok=True)
     probe = build_probe()
     a, b = build_folders()
     apps = find_apps()
+    ensure_setapp_running(apps)
     print("📦 " + ", ".join(f"{x['name']} {x['version']}" for x in apps))
     filee = next((x for x in apps if x["bundle"] == FILEE_ID), None)
     filee_was_running = bool(filee and running(filee))

@@ -12,3 +12,4 @@ CLAUDE.local.md
 
 # Agent scratch: plan execution ledgers (superpowers:executing-plans)
 .superpowers/
+.bench-venv/
