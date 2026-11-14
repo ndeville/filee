@@ -48,6 +48,8 @@ Filee reads folders with `getattrlistbulk`, copies with `copyfile` (an instant c
 
 This is personal software. It does what I need on my Mac. I don't offer support, and I read issues and pull requests when I have time. Fork it and make it yours.
 
+This fork's own changes are in [CHANGELOG.md](CHANGELOG.md).
+
 ## Features
 
 ### Browse
