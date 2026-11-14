@@ -512,6 +512,33 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(try decode(#"{"quitFinderOnLaunch": true}"#).quitFinderOnLaunch, true)
     }
 
+    func testNewSettingsPaneFieldsDefault() throws {
+        let decode = { (json: String) in try JSONDecoder().decode(Settings.self, from: Data(json.utf8)) }
+        let d = try decode("{}")
+        XCTAssertEqual(d.revealInNewTab, false)
+        XCTAssertEqual(d.springLoadedFolders, false)
+        XCTAssertNil(d.defaultConflictChoice)
+        XCTAssertEqual(d.sizeUnitBase1000, false)
+        XCTAssertEqual(d.hideSingleTabBar, false)
+    }
+
+    func testNewSettingsPaneFieldsRoundTrip() throws {
+        let decode = { (json: String) in try JSONDecoder().decode(Settings.self, from: Data(json.utf8)) }
+        let s = try decode(#"""
+        {"revealInNewTab": true, "springLoadedFolders": true,
+         "defaultConflictChoice": "keepBoth", "sizeUnitBase1000": true, "hideSingleTabBar": true}
+        """#)
+        XCTAssertEqual(s.revealInNewTab, true)
+        XCTAssertEqual(s.springLoadedFolders, true)
+        XCTAssertEqual(s.defaultConflictChoice, .keepBoth)
+        XCTAssertEqual(s.sizeUnitBase1000, true)
+        XCTAssertEqual(s.hideSingleTabBar, true)
+        // An old, minimal settings.json (pre-dating these fields) must still decode cleanly to defaults:
+        let old = try decode(#"{"fontSize": 16}"#)
+        XCTAssertEqual(old.fontSize, 16)
+        XCTAssertNil(old.defaultConflictChoice)
+    }
+
     func testKeybindingParser() {
         let defaults = [KeyBinding(chords: [KeyChord("cmd+r")!], command: "rename")]
         let json = #"[{"key": "cmd+j k", "command": "jump", "args": "~/x"}, {"key": "cmd+r", "command": "-rename"}]"#

@@ -26,7 +26,7 @@ public struct OperationProgress: Sendable {
 }
 
 /// What to do when the target name exists.
-public enum ConflictChoice: Sendable {
+public enum ConflictChoice: String, Codable, Sendable {
     case replace, keepBoth, skip, stop
 }
 

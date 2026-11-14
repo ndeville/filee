@@ -45,6 +45,19 @@ public struct Settings: Codable, Equatable, Sendable {
     /// Radius of the highlights inside the window (selection, current folder, tab, buttons). 0 = square, 4 = default.
     public var cornerRadius: Double
     public var quitFinderOnLaunch: Bool
+    /// Open a new tab instead of using the active pane, when Filee is handed a folder/file to reveal
+    /// (Finder's "Reveal in Filee", or any app opening a path) — not the agent CLI's `filee reveal`,
+    /// which always uses the active pane.
+    public var revealInNewTab: Bool
+    /// Drag a file over a folder, hover: the folder opens. Follows the system's own Accessibility
+    /// spring-loading delay — Filee has no delay of its own to set.
+    public var springLoadedFolders: Bool
+    /// What to do on a name conflict without asking. `nil` = always ask (today's only behavior).
+    public var defaultConflictChoice: ConflictChoice?
+    /// File sizes in base-1000 units ("1 GB" = 1000 MB) instead of base-2 ("1 GB" = 1024 MB).
+    public var sizeUnitBase1000: Bool
+    /// Hide a pane's tab bar while it has a single tab.
+    public var hideSingleTabBar: Bool
 
     public init() {
         fontName = "System"
@@ -72,6 +85,11 @@ public struct Settings: Codable, Equatable, Sendable {
         windowCorners = "rounded"
         cornerRadius = 4
         quitFinderOnLaunch = false
+        revealInNewTab = false
+        springLoadedFolders = false
+        defaultConflictChoice = nil
+        sizeUnitBase1000 = false
+        hideSingleTabBar = false
     }
 
     public init(from decoder: Decoder) throws {
@@ -95,6 +113,11 @@ public struct Settings: Codable, Equatable, Sendable {
         windowCorners = try c.decodeIfPresent(String.self, forKey: .windowCorners) == "square" ? "square" : d.windowCorners
         cornerRadius = min(10, max(0, try c.decodeIfPresent(Double.self, forKey: .cornerRadius) ?? d.cornerRadius))
         quitFinderOnLaunch = try c.decodeIfPresent(Bool.self, forKey: .quitFinderOnLaunch) ?? d.quitFinderOnLaunch
+        revealInNewTab = try c.decodeIfPresent(Bool.self, forKey: .revealInNewTab) ?? d.revealInNewTab
+        springLoadedFolders = try c.decodeIfPresent(Bool.self, forKey: .springLoadedFolders) ?? d.springLoadedFolders
+        defaultConflictChoice = try c.decodeIfPresent(ConflictChoice.self, forKey: .defaultConflictChoice) ?? d.defaultConflictChoice
+        sizeUnitBase1000 = try c.decodeIfPresent(Bool.self, forKey: .sizeUnitBase1000) ?? d.sizeUnitBase1000
+        hideSingleTabBar = try c.decodeIfPresent(Bool.self, forKey: .hideSingleTabBar) ?? d.hideSingleTabBar
     }
 
     public static var fileText: String {
