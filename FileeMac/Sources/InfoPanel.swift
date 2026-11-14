@@ -69,7 +69,7 @@ final class InfoPanel: NSObject {
         if it.kind == .directory {
             values["Size"] = Self.calculating
         } else {
-            values["Size"] = Format.size(it.size)
+            values["Size"] = Format.size(it.size, base1000: Theme.settings.sizeUnitBase1000)
         }
         if let c = attrs[.creationDate] as? Date { values["Created"] = Format.fullDate(c.timeIntervalSince1970) }
         if let m = attrs[.modificationDate] as? Date { values["Modified"] = Format.fullDate(m.timeIntervalSince1970) }
@@ -89,7 +89,7 @@ final class InfoPanel: NSObject {
         values["Items"] = Format.items(items.count)
         let parents = Set(items.map(\.parent))
         if parents.count == 1, let p = parents.first { values["Where"] = p.abbreviatingHome }
-        values["Size"] = folders > 0 ? Self.calculating : Format.size(items.reduce(0) { $0 + max(0, $1.size) })
+        values["Size"] = folders > 0 ? Self.calculating : Format.size(items.reduce(0) { $0 + max(0, $1.size) }, base1000: Theme.settings.sizeUnitBase1000)
     }
 
     // MARK: Background
@@ -98,7 +98,7 @@ final class InfoPanel: NSObject {
         let one = items.count == 1 ? items[0] : nil
         if let one, one.kind != .directory {
             let v = try? one.url.resourceValues(forKeys: [.totalFileAllocatedSizeKey])
-            if let a = v?.totalFileAllocatedSize { post(["On disk": Format.size(Int64(a))], gen) }
+            if let a = v?.totalFileAllocatedSize { post(["On disk": Format.size(Int64(a), base1000: Theme.settings.sizeUnitBase1000)], gen) }
         }
         if let one { loadMetadata(one, gen: gen) }
 
@@ -130,8 +130,8 @@ final class InfoPanel: NSObject {
     private static func sizeRows(_ u: DirectoryLister.Usage, done: Bool) -> [String: String] {
         let more = done ? "" : " so far"
         return [
-            "Size": Format.size(u.bytes) + more,
-            "On disk": Format.size(u.allocated) + more,
+            "Size": Format.size(u.bytes, base1000: Theme.settings.sizeUnitBase1000) + more,
+            "On disk": Format.size(u.allocated, base1000: Theme.settings.sizeUnitBase1000) + more,
             "Files": u.files.formatted() + more,
             "Folders": u.folders.formatted() + more,
         ]
@@ -143,7 +143,7 @@ final class InfoPanel: NSObject {
         let v = try? url.resourceValues(forKeys: [.tagNamesKey, .volumeLocalizedNameKey, .volumeAvailableCapacityForImportantUsageKey, .volumeAvailableCapacityKey])
         if let tags = v?.tagNames, !tags.isEmpty { rows["Tags"] = tags.joined(separator: ", ") }
         if let name = v?.volumeLocalizedName {
-            rows["Volume"] = v.flatMap(URL.freeSpace).map { "\(name) · \(Format.size($0)) free" } ?? name
+            rows["Volume"] = v.flatMap(URL.freeSpace).map { "\(name) · \(Format.size($0, base1000: Theme.settings.sizeUnitBase1000)) free" } ?? name
         }
         if let md = MDItemCreateWithURL(nil, url as CFURL) {
             if let used = MDItemCopyAttribute(md, kMDItemLastUsedDate) as? Date { rows["Last opened"] = Format.fullDate(used.timeIntervalSince1970) }

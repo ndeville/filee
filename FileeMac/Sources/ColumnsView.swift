@@ -2,7 +2,7 @@ import AppKit
 import FileeCore
 
 /// 1 column's table: keys go to the columns view first.
-final class ColumnTableView: NSTableView {
+final class ColumnTableView: NSTableView, NSSpringLoadingDestination {
     weak var owner: ColumnsView?
     var column = 0
     var activePane = true
@@ -25,6 +25,54 @@ final class ColumnTableView: NSTableView {
         window?.makeFirstResponder(self)
         return owner?.menu(column: column, clickedRow: r)
     }
+
+    // MARK: Spring-loaded folders (Settings > Browser). No delay to set: AppKit follows the
+    // system's own Accessibility > Pointer Control spring-loading delay, the one Finder uses too.
+
+    private func springLoadRow(_ draggingInfo: NSDraggingInfo) -> Int? {
+        let p = convert(draggingInfo.draggingLocation, from: nil)
+        let r = row(at: p)
+        guard r >= 0, owner?.springLoadFolder(column: column, row: r) != nil else { return nil }
+        return r
+    }
+
+    /// The whole table is 1 spring-loading destination covering every row, so AppKit's own hover
+    /// timer doesn't restart on its own when the drag slides from one row onto another — this view
+    /// has to notice the target changed and tell AppKit to restart it.
+    private var lastSpringLoadRow: Int?
+
+    func springLoadingEntered(_ draggingInfo: NSDraggingInfo) -> NSSpringLoadingOptions {
+        let row = springLoadRow(draggingInfo)
+        lastSpringLoadRow = row
+        guard Theme.settings.springLoadedFolders, row != nil else { return .disabled }
+        return .enabled
+    }
+
+    func springLoadingUpdated(_ draggingInfo: NSDraggingInfo) -> NSSpringLoadingOptions {
+        guard Theme.settings.springLoadedFolders else { return .disabled }
+        guard let row = springLoadRow(draggingInfo) else {
+            lastSpringLoadRow = nil
+            return .disabled
+        }
+        guard row == lastSpringLoadRow else {
+            // A different row than the one AppKit has been timing: disable for this update so it
+            // restarts the hover delay from scratch.
+            lastSpringLoadRow = row
+            return .disabled
+        }
+        return .enabled
+    }
+
+    func springLoadingExited(_ draggingInfo: NSDraggingInfo) {
+        lastSpringLoadRow = nil
+    }
+
+    func springLoadingActivated(_ activated: Bool, draggingInfo: NSDraggingInfo) {
+        guard activated, let r = springLoadRow(draggingInfo) else { return }
+        owner?.springLoadActivate(column: column, row: r)
+    }
+
+    func springLoadingHighlightChanged(_ draggingInfo: NSDraggingInfo) {}
 }
 
 /// Miller columns (⌘4). Column 0 shows the pane's folder; a selected folder opens the next column.
@@ -268,6 +316,21 @@ final class ColumnsView: NSObject, FileView, NSTableViewDataSource, NSTableViewD
         guard sender.column < columns.count, r >= 0, r < columns[sender.column].items.count else { return }
         let it = columns[sender.column].items[r]
         if !it.isFolder { delegate?.fileView(open: it) }
+    }
+
+    // MARK: Spring-loaded folders (Settings > Browser), ColumnTableView calls into its owner since
+    // `columns` is private. Selecting a folder row is this view's own "open it" — it's what already
+    // reveals the next column (tableViewSelectionDidChange above), there's no separate open action here.
+
+    func springLoadFolder(column: Int, row: Int) -> FileItem? {
+        guard column < columns.count, row >= 0, row < columns[column].items.count else { return nil }
+        let it = columns[column].items[row]
+        return it.isFolder ? it : nil
+    }
+
+    func springLoadActivate(column: Int, row: Int) {
+        guard springLoadFolder(column: column, row: row) != nil else { return }
+        columns[column].table.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
     }
 
     // MARK: Keys

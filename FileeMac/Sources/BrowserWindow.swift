@@ -262,7 +262,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
             let bytes = sel.reduce(Int64(0)) { $0 + max(0, pane.folderModel.size(of: $1)) }
             let folders = sel.filter(\.isFolder).count
             var text = sel.count == 1 ? sel[0].name.singleLine : "\(sel.count.formatted()) selected"
-            if bytes > 0 { text += " · \(Format.size(bytes))" }
+            if bytes > 0 { text += " · \(Format.size(bytes, base1000: Theme.settings.sizeUnitBase1000))" }
             if folders > 0, sel.count > 1 { text += " · \(Count.of(folders, "folder", "folders"))" }
             statusBar.left.stringValue = text
         }
@@ -506,7 +506,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         case "editSettingsFile": AppDelegate.shared.openConfig(AppDelegate.shared.config.settingsURL)
         case "openKeybindings": AppDelegate.shared.openConfig(AppDelegate.shared.config.keybindingsURL)
         case "openActions": AppDelegate.shared.openConfig(AppDelegate.shared.config.actionsURL)
-        case "showMemory": showMessage("Memory footprint: \(Format.size(Int64(AppDelegate.memoryFootprint())))")
+        case "showMemory": showMessage("Memory footprint: \(Format.size(Int64(AppDelegate.memoryFootprint()), base1000: Theme.settings.sizeUnitBase1000))")
         case "newWindow": AppDelegate.shared.newWindow()
         case "expand": return pane.fileView.expandSelected(true)
         case "collapse": return pane.fileView.expandSelected(false)

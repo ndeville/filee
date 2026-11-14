@@ -105,6 +105,23 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(Format.size(-1), "--")
     }
 
+    func testFormatSizeBase1000() {
+        // 1536 formats to "1.5 KB" in BOTH modes (1536/1024 = 1536/1000 rounds the same) — it doesn't
+        // actually distinguish them. 1_500_000 does: 1.5 MB at /1000 vs 1.4 MB at /1024, no rounding
+        // boundary ambiguity either way.
+        XCTAssertEqual(Format.size(1_500_000, base1000: true), "1.5 MB")
+        XCTAssertEqual(Format.size(1_500_000, base1000: false), "1.4 MB")
+    }
+
+    func testFormatSizeBase1000NegativeStaysPlaceholder() {
+        XCTAssertEqual(Format.size(-1, base1000: true), "--")
+    }
+
+    func testFormatSizeDefaultParameterUnchanged() {
+        // existing call style, no base1000 argument, must still compile and pass
+        XCTAssertEqual(Format.size(1536), "1.5 KB")
+    }
+
     func testFormatDate() {
         let now = Date()
         XCTAssertTrue(Format.date(now.timeIntervalSince1970, now: now).hasPrefix("today "))
@@ -510,6 +527,43 @@ final class CoreTests: XCTestCase {
         let decode = { (json: String) in try JSONDecoder().decode(Settings.self, from: Data(json.utf8)) }
         XCTAssertEqual(try decode("{}").quitFinderOnLaunch, false)
         XCTAssertEqual(try decode(#"{"quitFinderOnLaunch": true}"#).quitFinderOnLaunch, true)
+    }
+
+    func testNewSettingsPaneFieldsDefault() throws {
+        let decode = { (json: String) in try JSONDecoder().decode(Settings.self, from: Data(json.utf8)) }
+        let d = try decode("{}")
+        XCTAssertEqual(d.revealInNewTab, false)
+        XCTAssertEqual(d.springLoadedFolders, false)
+        XCTAssertNil(d.defaultConflictChoice)
+        XCTAssertEqual(d.sizeUnitBase1000, false)
+        XCTAssertEqual(d.hideSingleTabBar, false)
+    }
+
+    func testNewSettingsPaneFieldsRoundTrip() throws {
+        let decode = { (json: String) in try JSONDecoder().decode(Settings.self, from: Data(json.utf8)) }
+        let s = try decode(#"""
+        {"revealInNewTab": true, "springLoadedFolders": true,
+         "defaultConflictChoice": "keepBoth", "sizeUnitBase1000": true, "hideSingleTabBar": true}
+        """#)
+        XCTAssertEqual(s.revealInNewTab, true)
+        XCTAssertEqual(s.springLoadedFolders, true)
+        XCTAssertEqual(s.defaultConflictChoice, .keepBoth)
+        XCTAssertEqual(s.sizeUnitBase1000, true)
+        XCTAssertEqual(s.hideSingleTabBar, true)
+        // An old, minimal settings.json (pre-dating these fields) must still decode cleanly to defaults:
+        let old = try decode(#"{"fontSize": 16}"#)
+        XCTAssertEqual(old.fontSize, 16)
+        XCTAssertNil(old.defaultConflictChoice)
+    }
+
+    /// A hand-edited settings.json with a misspelled defaultConflictChoice (e.g. "keep-both"
+    /// instead of "keepBoth") must not fail the whole file — every other field, and every other
+    /// use of settings.json, still needs to decode.
+    func testMalformedDefaultConflictChoiceDoesNotFailWholeDecode() throws {
+        let decode = { (json: String) in try JSONDecoder().decode(Settings.self, from: Data(json.utf8)) }
+        let s = try decode(#"{"defaultConflictChoice": "keep-both", "fontSize": 16}"#)
+        XCTAssertNil(s.defaultConflictChoice)
+        XCTAssertEqual(s.fontSize, 16)
     }
 
     func testKeybindingParser() {

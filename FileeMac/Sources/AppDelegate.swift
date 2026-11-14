@@ -56,7 +56,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         lastKey = w
         launchMilliseconds = Int((ProcessInfo.processInfo.systemUptime - launchStart) * 1000)
         launched = true
-        for url in pendingOpen { reveal(url) }
+        revealAll(pendingOpen)
         pendingOpen = []
         for url in pendingActions { route(url) }
         pendingActions = []
@@ -89,7 +89,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             pendingOpen += urls
             return
         }
-        for u in urls { reveal(u) }
+        revealAll(urls)
     }
 
     @objc private func handleReveal(_ event: NSAppleEventDescriptor, reply: NSAppleEventDescriptor) {
@@ -100,20 +100,51 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if count > 0 {
             for i in 1...count { if let u = list.atIndex(i)?.coerce(toDescriptorType: typeFileURL)?.fileURLValue { urls.append(u) } }
         }
-        for u in urls { reveal(u) }
+        revealAll(urls)
         summon()
     }
 
     /// A folder opens in the active pane; a file opens its folder with the file selected.
     /// `front: false` (an agent's background URL) leaves the window where it is.
-    func reveal(_ url: URL, front: Bool = true) {
+    /// `respectTabPreference: false` (the agent CLI's `filee reveal`, via `route(_:)`) always uses the
+    /// active pane, regardless of `Settings.revealInNewTab` — its documented contract doesn't change.
+    func reveal(_ url: URL, front: Bool = true, respectTabPreference: Bool = true) {
         guard let w = activeWindow else { return }
         var isDir: ObjCBool = false
         FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
-        if isDir.boolValue, !DirectoryLister.packageExtensions.contains(url.pathExtension.lowercased()) {
-            w.activePane.navigate(to: url.path)
+        let isFolder = isDir.boolValue && !DirectoryLister.packageExtensions.contains(url.pathExtension.lowercased())
+        let newTab = respectTabPreference && Theme.settings.revealInNewTab
+        if isFolder {
+            if newTab { w.activePane.newTab(path: url.path) } else { w.activePane.navigate(to: url.path) }
         } else {
-            w.activePane.navigate(to: url.deletingLastPathComponent().path, select: [url.path])
+            let folder = url.deletingLastPathComponent().path
+            if newTab { w.activePane.newTab(path: folder, select: [url.path]) } else { w.activePane.navigate(to: folder, select: [url.path]) }
+        }
+        if front { w.window?.makeKeyAndOrderFront(nil) }
+    }
+
+    /// Several paths at once (Finder/an app's "Reveal in Filee" on a multi-file selection, or an
+    /// Apple Event with several items): files that share a parent folder open together, in 1 tab/pane
+    /// with every sibling selected — not 1 tab per file, which `reveal(_:)` called in a loop would do
+    /// whenever "reveal in new tab" is on.
+    func revealAll(_ urls: [URL], front: Bool = true) {
+        guard !urls.isEmpty else { return }
+        guard urls.count > 1 else { reveal(urls[0], front: front); return }
+        guard let w = activeWindow else { return }
+        var filesByParent: [String: [String]] = [:]
+        for url in urls {
+            var isDir: ObjCBool = false
+            FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
+            let isFolder = isDir.boolValue && !DirectoryLister.packageExtensions.contains(url.pathExtension.lowercased())
+            if isFolder {
+                if filesByParent[url.path] == nil { filesByParent[url.path] = [] }
+            } else {
+                filesByParent[url.deletingLastPathComponent().path, default: []].append(url.path)
+            }
+        }
+        let newTab = Theme.settings.revealInNewTab
+        for (folder, files) in filesByParent {
+            if newTab { w.activePane.newTab(path: folder, select: files) } else { w.activePane.navigate(to: folder, select: files) }
         }
         if front { w.window?.makeKeyAndOrderFront(nil) }
     }
@@ -137,7 +168,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         switch action {
         case "reveal":
             ok = exists && activeWindow != nil
-            if ok { reveal(URL(fileURLWithPath: paths[0]), front: front) }
+            if ok { reveal(URL(fileURLWithPath: paths[0]), front: front, respectTabPreference: false) }
         case "new-tab":
             var isDir: ObjCBool = false
             let folder = paths.first.map { FileManager.default.fileExists(atPath: $0, isDirectory: &isDir) && isDir.boolValue } ?? true
@@ -195,12 +226,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard !initial else { return }
         let problems = [err, aerr].compactMap { $0 } + Keymap.shared.errors
         if let p = problems.first { activeWindow?.showMessage("❌ \(p)", error: true) }
-        if changed {
-            WindowCorners.refresh()
-            for w in windows {
-                for p in w.panes { p.styleChanged() }
-                w.sidebar.reload()
-            }
+        if changed { applySettingsRefresh() }
+    }
+
+    /// Refreshes every open window after a settings change — from the file watcher (above) or from a
+    /// GUI write (`updateSettings`, below). The GUI path calls this directly because it sets
+    /// `Theme.settings` before writing the file, so the watcher's own `changed` check is always false
+    /// by the time it notices that write; calling it there too would be redundant, not wrong.
+    private func applySettingsRefresh() {
+        WindowCorners.refresh()
+        for w in windows {
+            for p in w.panes { p.styleChanged() }
+            w.sidebar.reload()
+            w.selectionChanged(in: w.activePane)
         }
     }
 
@@ -218,7 +256,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func setQuitFinderOnLaunch(_ on: Bool) { updateSettings { $0.quitFinderOnLaunch = on } }
 
     /// Writes 1 key of settings.json without touching the rest of the file's text more than needed.
-    private func updateSettings(_ change: (inout Settings) -> Void) {
+    func updateSettings(_ change: (inout Settings) -> Void) {
         var s = Theme.settings
         change(&s)
         Theme.settings = s
@@ -228,6 +266,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let text = (try? String(contentsOf: config.settingsURL, encoding: .utf8)) ?? ""
         let comments = text.split(separator: "\n", omittingEmptySubsequences: false).prefix { $0.hasPrefix("//") }.joined(separator: "\n")
         config.write((comments.isEmpty ? "" : comments + "\n\n") + String(decoding: data, as: UTF8.self) + "\n", to: config.settingsURL)
+        applySettingsRefresh()
     }
 
     func saveColumns(_ cols: [String]) {

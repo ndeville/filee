@@ -3,14 +3,16 @@ import UniformTypeIdentifiers
 
 public enum Format {
     /// Base-2 sizes, as Path Finder shows them: "512 B", "1.2 KB", "34.5 MB", "1.07 GB".
-    public static func size(_ bytes: Int64) -> String {
+    /// `base1000`: base-1000 units instead ("1 GB" = 1000 MB) when the user's set that preference.
+    public static func size(_ bytes: Int64, base1000: Bool = false) -> String {
+        let base: Double = base1000 ? 1000 : 1024
         if bytes < 0 { return "--" }
-        if bytes < 1024 { return "\(bytes) B" }
+        if Double(bytes) < base { return "\(bytes) B" }
         let units = ["KB", "MB", "GB", "TB", "PB"]
-        var value = Double(bytes) / 1024
+        var value = Double(bytes) / base
         var i = 0
-        while value >= 1024, i < units.count - 1 {
-            value /= 1024
+        while value >= base, i < units.count - 1 {
+            value /= base
             i += 1
         }
         let digits = value >= 100 ? 0 : (value >= 10 ? 1 : (i >= 2 ? 2 : 1))

@@ -162,7 +162,7 @@ enum ListColumn: String, CaseIterable {
     func text(_ item: FileItem, size: Int64) -> String {
         switch self {
         case .name: return item.name
-        case .size: return item.isFolder || item.kind == .directory ? (size >= 0 ? Format.size(size) : "--") : Format.size(item.size)
+        case .size: return item.isFolder || item.kind == .directory ? (size >= 0 ? Format.size(size, base1000: Theme.settings.sizeUnitBase1000) : "--") : Format.size(item.size, base1000: Theme.settings.sizeUnitBase1000)
         case .modified: return Format.date(item.modified)
         case .kind: return Format.kind(item)
         case .added: return Format.date(item.addedOrCreated)

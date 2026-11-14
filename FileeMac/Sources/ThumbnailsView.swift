@@ -78,7 +78,7 @@ final class ThumbItem: NSCollectionViewItem {
     }
 }
 
-final class ThumbCollectionView: NSCollectionView {
+final class ThumbCollectionView: NSCollectionView, NSSpringLoadingDestination {
     weak var fileDelegate: FileViewDelegate?
     weak var owner: ThumbnailsView?
 
@@ -120,6 +120,53 @@ final class ThumbCollectionView: NSCollectionView {
             fileDelegate?.fileView(open: it)
         }
     }
+
+    // MARK: Spring-loaded folders (Settings > Browser). No delay to set: AppKit follows the
+    // system's own Accessibility > Pointer Control spring-loading delay, the one Finder uses too.
+
+    private func springLoadTarget(_ draggingInfo: NSDraggingInfo) -> FileItem? {
+        let p = convert(draggingInfo.draggingLocation, from: nil)
+        guard let ip = indexPathForItem(at: p), let it = owner?.item(at: ip.item), it.isFolder else { return nil }
+        return it
+    }
+
+    /// The whole view is 1 spring-loading destination covering every item, so AppKit's own hover
+    /// timer doesn't restart on its own when the drag slides from one folder onto another — this
+    /// view has to notice the target changed and tell AppKit to restart it.
+    private var lastSpringLoadPath: String?
+
+    func springLoadingEntered(_ draggingInfo: NSDraggingInfo) -> NSSpringLoadingOptions {
+        let target = springLoadTarget(draggingInfo)
+        lastSpringLoadPath = target?.path
+        guard Theme.settings.springLoadedFolders, target != nil else { return .disabled }
+        return .enabled
+    }
+
+    func springLoadingUpdated(_ draggingInfo: NSDraggingInfo) -> NSSpringLoadingOptions {
+        guard Theme.settings.springLoadedFolders else { return .disabled }
+        guard let target = springLoadTarget(draggingInfo) else {
+            lastSpringLoadPath = nil
+            return .disabled
+        }
+        guard target.path == lastSpringLoadPath else {
+            // A different folder than the one AppKit has been timing: disable for this update so
+            // it restarts the hover delay from scratch.
+            lastSpringLoadPath = target.path
+            return .disabled
+        }
+        return .enabled
+    }
+
+    func springLoadingExited(_ draggingInfo: NSDraggingInfo) {
+        lastSpringLoadPath = nil
+    }
+
+    func springLoadingActivated(_ activated: Bool, draggingInfo: NSDraggingInfo) {
+        guard activated, let it = springLoadTarget(draggingInfo) else { return }
+        fileDelegate?.fileView(open: it)
+    }
+
+    func springLoadingHighlightChanged(_ draggingInfo: NSDraggingInfo) {}
 }
 
 /// The thumbnail grid (⌘3). ⌘+ and ⌘- change the size, per folder.

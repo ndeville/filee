@@ -46,7 +46,7 @@ final class OperationCenter {
         guard !sources.isEmpty, !refuseIfReadOnly() else { return }
         let t = Transfer(mode: mode, sources: sources, into: folder)
         t.resolveConflict = { [weak self] name in
-            if let c = self?.autoConflict { return (c, true) }
+            if let c = self?.autoConflict ?? Theme.settings.defaultConflictChoice { return (c, true) }
             var answer: (ConflictChoice, Bool) = (.stop, false)
             DispatchQueue.main.sync { answer = Self.askConflict(name: name, folder: folder) }
             return answer

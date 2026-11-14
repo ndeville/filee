@@ -177,6 +177,25 @@ final class QAHarness {
             record(step, ["path": wc.activePane.path])
             done()
 
+        case "revealPath":
+            // Simulates a real OS-triggered reveal (Finder's "Reveal in Filee", or any app handing Filee
+            // a path) — calls AppDelegate.reveal(_:) directly, the way application(_:open:) does, bypassing
+            // the filee:// router entirely (the "url" op above is the CLI's own path, a different test).
+            if let path = step["path"] as? String {
+                AppDelegate.shared.reveal(URL(fileURLWithPath: path.expandingHome), front: true)
+            }
+            record(step)
+            done()
+
+        case "revealPaths":
+            // Several paths at once (Finder's "Reveal in Filee" on a multi-file selection) —
+            // calls AppDelegate.revealAll(_:) directly, the way application(_:open:) does with several URLs.
+            if let paths = step["paths"] as? [String] {
+                AppDelegate.shared.revealAll(paths.map { URL(fileURLWithPath: $0.expandingHome) }, front: true)
+            }
+            record(step)
+            done()
+
         case "infoClose":
             InfoPanel.shared.close()
             record(step)
@@ -230,6 +249,14 @@ final class QAHarness {
             record(step)
             done()
 
+        case "autoConflict":
+            // Overrides OperationCenter.shared.autoConflict for a step (normally fixed for the run by
+            // FILEE_QA_CONFLICT) so a test can clear it and exercise the settings-driven fallback, or
+            // set it back afterward.
+            OperationCenter.shared.autoConflict = (step["set"] as? String).flatMap(ConflictChoice.init(rawValue:))
+            record(step)
+            done()
+
         case "settings":
             // Writes keys into settings.json, as Nic would in an editor, and waits for Filee to reload it.
             let url = AppDelegate.shared.config.settingsURL
@@ -244,6 +271,9 @@ final class QAHarness {
                     switch k {
                     case "windowCorners": return s.windowCorners == v as? String
                     case "cornerRadius": return s.cornerRadius == (v as? NSNumber)?.doubleValue
+                    case "defaultConflictChoice": return s.defaultConflictChoice?.rawValue == v as? String
+                    case "revealInNewTab": return s.revealInNewTab == v as? Bool
+                    case "hideSingleTabBar": return s.hideSingleTabBar == v as? Bool
                     default: return true
                     }
                 }
@@ -598,6 +628,7 @@ final class QAHarness {
         if let t = step["tabs"] as? Int { ok = ok && p.tabs.count == t }
         if let o = step["overflow"] as? Bool { p.container.layoutSubtreeIfNeeded(); ok = ok && p.tabStrip.overflowShown == o && p.tabStrip.hiddenTabs.isEmpty == !o }
         if let v = step["activeTabInView"] as? Bool { ok = ok && p.tabStrip.activeTabInView == v }
+        if let h = step["tabBarHidden"] as? Bool { ok = ok && p.tabStrip.isHidden == h }
         if let a = step["activeTab"] as? Int { ok = ok && p.activeTab == a }
         if let q = step["query"] as? String { ok = ok && p.folderModel.query == q }
         if let c = step["contains"] as? [String: String] {

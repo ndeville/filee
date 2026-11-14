@@ -15,7 +15,7 @@ final class ListNode {
 }
 
 /// The outline view: key handling goes to the pane first.
-final class FileOutlineView: NSOutlineView {
+final class FileOutlineView: NSOutlineView, NSSpringLoadingDestination {
     weak var fileDelegate: FileViewDelegate?
     var activePane = true
 
@@ -61,6 +61,55 @@ final class FileOutlineView: NSOutlineView {
         if responder is NSTextField, event?.type == .leftMouseDown { return false }
         return super.validateProposedFirstResponder(responder, for: event)
     }
+
+    // MARK: Spring-loaded folders (Settings > Browser). No delay to set: AppKit follows the
+    // system's own Accessibility > Pointer Control spring-loading delay, the one Finder uses too.
+
+    private func springLoadTarget(_ draggingInfo: NSDraggingInfo) -> ListNode? {
+        let p = convert(draggingInfo.draggingLocation, from: nil)
+        let row = self.row(at: p)
+        guard row >= 0, let n = item(atRow: row) as? ListNode, n.item.isFolder else { return nil }
+        return n
+    }
+
+    /// The whole view is 1 spring-loading destination covering every row, so AppKit's own hover
+    /// timer doesn't restart on its own when the drag slides from one folder onto another — this
+    /// view has to notice the target changed and tell AppKit to restart it.
+    private var lastSpringLoadPath: String?
+
+    func springLoadingEntered(_ draggingInfo: NSDraggingInfo) -> NSSpringLoadingOptions {
+        let target = springLoadTarget(draggingInfo)
+        lastSpringLoadPath = target?.item.path
+        guard Theme.settings.springLoadedFolders, target != nil else { return .disabled }
+        return .enabled
+    }
+
+    func springLoadingUpdated(_ draggingInfo: NSDraggingInfo) -> NSSpringLoadingOptions {
+        guard Theme.settings.springLoadedFolders else { return .disabled }
+        guard let target = springLoadTarget(draggingInfo) else {
+            lastSpringLoadPath = nil
+            return .disabled
+        }
+        guard target.item.path == lastSpringLoadPath else {
+            // A different folder than the one AppKit has been timing: disable for this update so
+            // it restarts the hover delay from scratch, instead of opening on the previous folder's
+            // almost-elapsed timer.
+            lastSpringLoadPath = target.item.path
+            return .disabled
+        }
+        return .enabled
+    }
+
+    func springLoadingExited(_ draggingInfo: NSDraggingInfo) {
+        lastSpringLoadPath = nil
+    }
+
+    func springLoadingActivated(_ activated: Bool, draggingInfo: NSDraggingInfo) {
+        guard activated, let n = springLoadTarget(draggingInfo) else { return }
+        fileDelegate?.fileView(open: n.item)
+    }
+
+    func springLoadingHighlightChanged(_ draggingInfo: NSDraggingInfo) {}
 }
 
 /// The tree list (⌘5): columns size themselves to their content on every load.

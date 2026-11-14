@@ -117,10 +117,10 @@ final class TransferPanel: FlippedView {
     /// "1.2 GB of 4.0 GB · 85 MB/s · 31 s left"
     static func detail(_ p: OperationProgress, elapsed: TimeInterval) -> String {
         guard p.bytesTotal > 0 else { return "\(Int((p.fraction * 100).rounded()))%" }
-        var parts = ["\(Format.size(p.bytesDone)) of \(Format.size(p.bytesTotal))"]
+        var parts = ["\(Format.size(p.bytesDone, base1000: Theme.settings.sizeUnitBase1000)) of \(Format.size(p.bytesTotal, base1000: Theme.settings.sizeUnitBase1000))"]
         if elapsed > 0.5, p.bytesDone > 0 {
             let speed = Double(p.bytesDone) / elapsed
-            parts.append("\(Format.size(Int64(speed)))/s")
+            parts.append("\(Format.size(Int64(speed), base1000: Theme.settings.sizeUnitBase1000))/s")
             let left = Double(p.bytesTotal - p.bytesDone) / speed
             parts.append(left < 60 ? "\(max(1, Int(left.rounded()))) s left" : "\(Int((left / 60).rounded())) min left")
         }

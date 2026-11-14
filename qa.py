@@ -52,6 +52,9 @@ def build_fixtures(base: Path) -> dict:
     (a / ".hidden").write_text("h", encoding="utf-8")
     (a / "sub" / "inner.txt").write_text("inner", encoding="utf-8")
     (a / "sub" / "deeper" / "deep.txt").write_text("deep", encoding="utf-8")
+    # Differentiates base-1000 ("1.5 MB") from base-2 ("1.4 MB") display with no rounding-boundary
+    # ambiguity either way (see FileeCore's testFormatSizeBase1000).
+    (b / "sized.bin").write_bytes(b"\0" * 1_500_000)
     for i, color in enumerate([(231, 76, 60), (11, 107, 203), (47, 138, 58)], start=1):
         (a / f"IMG0{i}.png").write_bytes(png_bytes(64, 48, color))
     pics = base / "pics"
@@ -324,6 +327,53 @@ def suites(fx: dict) -> dict:
             {"op": "navigate", "pane": 0, "path": pics},
             {"op": "expect", "label": "an image folder opens as thumbnails", "view": "thumbnails"},
             {"op": "screenshot", "name": "08-auto-thumbnails"},
+            # revealInNewTab: an OS-triggered reveal (Finder/default-browser, simulated with "revealPath")
+            # opens a new tab instead of using the active pane, when the setting is on.
+            {"op": "navigate", "pane": 0, "path": A},
+            {"op": "settings", "set": {"revealInNewTab": True}},
+            {"op": "revealPath", "path": A + "/sub"},
+            {"op": "wait", "ms": 300},
+            {"op": "expect", "label": "revealInNewTab: revealing a folder opens a new tab at that folder",
+             "tabs": 2, "path": A + "/sub"},
+            {"op": "key", "keys": "cmd+w"},
+            {"op": "revealPath", "path": A + "/alpha.txt"},
+            {"op": "wait", "ms": 300},
+            {"op": "expect", "label": "revealInNewTab: revealing a file opens a new tab at its parent folder, with the file selected",
+             "tabs": 2, "path": A, "selected": ["alpha.txt"]},
+            {"op": "key", "keys": "cmd+w"},
+            # Revealing several files that share a parent folder opens 1 tab with every file selected,
+            # not 1 tab per file.
+            {"op": "revealPaths", "paths": [A + "/alpha.txt", A + "/beta.md"]},
+            {"op": "wait", "ms": 300},
+            {"op": "expect", "label": "revealInNewTab: revealing 2 files in the same folder opens 1 new tab, both selected",
+             "tabs": 2, "path": A, "selected": ["alpha.txt", "beta.md"]},
+            {"op": "key", "keys": "cmd+w"},
+            # sizeUnitBase1000: the selection status bar switches units live, no reopen needed.
+            {"op": "navigate", "pane": 0, "path": B},
+            {"op": "select", "names": ["sized.bin"]},
+            {"op": "expect", "label": "file size shows base-2 units by default", "statusBar": "1.4 MB"},
+            {"op": "settings", "set": {"sizeUnitBase1000": True}},
+            {"op": "expect", "label": "sizeUnitBase1000: the status bar switches to base-10 units live", "statusBar": "1.5 MB"},
+            {"op": "settings", "set": {"sizeUnitBase1000": False}},
+            # The CLI's own "filee reveal" (filee://reveal, the same route qa.py's "cli" suite exercises)
+            # always uses the active pane, even with revealInNewTab on — it's explicitly exempted.
+            {"op": "navigate", "pane": 0, "path": B},
+            {"op": "url", "url": f"filee://reveal?path={A}&rid=qarid-tab-exempt"},
+            {"op": "wait", "ms": 300},
+            {"op": "expect", "label": "filee://reveal (the CLI's path) still uses the active pane, revealInNewTab notwithstanding",
+             "tabs": 1, "path": A},
+            # hideSingleTabBar: the tab bar hides with 1 tab, shows again with 2, and reacts live (not
+            # just at pane creation) when closing back down to 1.
+            {"op": "settings", "set": {"hideSingleTabBar": True}},
+            {"op": "wait", "ms": 300},
+            {"op": "expect", "label": "hideSingleTabBar: hides with a single tab", "tabBarHidden": True},
+            {"op": "key", "keys": "cmd+t"},
+            {"op": "expect", "label": "hideSingleTabBar: shows again with a 2nd tab", "tabs": 2, "tabBarHidden": False},
+            {"op": "key", "keys": "cmd+w"},
+            {"op": "expect", "label": "hideSingleTabBar: hides live when closing back down to 1 tab", "tabs": 1, "tabBarHidden": True},
+            {"op": "settings", "set": {"hideSingleTabBar": False}},
+            {"op": "wait", "ms": 300},
+            {"op": "expect", "label": "hideSingleTabBar off: the bar shows again, live, with no tab-count change", "tabBarHidden": False},
         ],
         "filter": [
             {"op": "navigate", "pane": 0, "path": A},
@@ -497,6 +547,34 @@ def suites(fx: dict) -> dict:
             {"op": "waitIdle"},
             {"op": "expect", "label": "pasting on a right-clicked folder pastes into it, not beside it",
              "exists": A + "/sub/alpha.txt"},
+            # defaultConflictChoice: FILEE_QA_CONFLICT (autoConflict) is always set for the whole QA run
+            # (qa.py launches every suite with it), so it's cleared here with the "autoConflict" op to
+            # actually exercise the settings-driven fallback rather than trivially pass either way.
+            {"op": "touch", "path": A + "/conflict-test.txt"},
+            {"op": "touch", "path": B + "/conflict-test.txt"},
+            {"op": "navigate", "pane": 0, "path": A},
+            {"op": "select", "pane": 0, "names": ["conflict-test.txt"]},
+            {"op": "edit", "action": "copy"},
+            {"op": "navigate", "pane": 0, "path": B},
+            {"op": "autoConflict", "set": None},
+            {"op": "settings", "set": {"defaultConflictChoice": "keepBoth"}},
+            {"op": "edit", "action": "paste"},
+            {"op": "waitIdle"},
+            {"op": "expect", "label": "defaultConflictChoice keeps both with no alert, once FILEE_QA_CONFLICT is cleared",
+             "exists": [B + "/conflict-test.txt", B + "/conflict-test 2.txt"]},
+            # Review Focus: FILEE_QA_CONFLICT wins over a configured default conflict policy.
+            {"op": "touch", "path": A + "/conflict-test2.txt"},
+            {"op": "touch", "path": B + "/conflict-test2.txt"},
+            {"op": "navigate", "pane": 0, "path": A},
+            {"op": "select", "pane": 0, "names": ["conflict-test2.txt"]},
+            {"op": "edit", "action": "copy"},
+            {"op": "navigate", "pane": 0, "path": B},
+            {"op": "autoConflict", "set": "keepBoth"},
+            {"op": "settings", "set": {"defaultConflictChoice": "replace"}},
+            {"op": "edit", "action": "paste"},
+            {"op": "waitIdle"},
+            {"op": "expect", "label": "FILEE_QA_CONFLICT (keepBoth) wins over a different defaultConflictChoice (replace)",
+             "exists": [B + "/conflict-test2.txt", B + "/conflict-test2 2.txt"]},
             {"op": "screenshot", "name": "06-after-ops"},
         ],
         "rename": [
