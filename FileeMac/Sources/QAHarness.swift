@@ -230,6 +230,14 @@ final class QAHarness {
             record(step)
             done()
 
+        case "autoConflict":
+            // Overrides OperationCenter.shared.autoConflict for a step (normally fixed for the run by
+            // FILEE_QA_CONFLICT) so a test can clear it and exercise the settings-driven fallback, or
+            // set it back afterward.
+            OperationCenter.shared.autoConflict = (step["set"] as? String).flatMap(ConflictChoice.init(rawValue:))
+            record(step)
+            done()
+
         case "settings":
             // Writes keys into settings.json, as Nic would in an editor, and waits for Filee to reload it.
             let url = AppDelegate.shared.config.settingsURL
@@ -244,6 +252,9 @@ final class QAHarness {
                     switch k {
                     case "windowCorners": return s.windowCorners == v as? String
                     case "cornerRadius": return s.cornerRadius == (v as? NSNumber)?.doubleValue
+                    case "defaultConflictChoice": return s.defaultConflictChoice?.rawValue == v as? String
+                    case "revealInNewTab": return s.revealInNewTab == v as? Bool
+                    case "hideSingleTabBar": return s.hideSingleTabBar == v as? Bool
                     default: return true
                     }
                 }
