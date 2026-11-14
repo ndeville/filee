@@ -78,7 +78,7 @@ final class ThumbItem: NSCollectionViewItem {
     }
 }
 
-final class ThumbCollectionView: NSCollectionView {
+final class ThumbCollectionView: NSCollectionView, NSSpringLoadingDestination {
     weak var fileDelegate: FileViewDelegate?
     weak var owner: ThumbnailsView?
 
@@ -120,6 +120,31 @@ final class ThumbCollectionView: NSCollectionView {
             fileDelegate?.fileView(open: it)
         }
     }
+
+    // MARK: Spring-loaded folders (Settings > Browser). No delay to set: AppKit follows the
+    // system's own Accessibility > Pointer Control spring-loading delay, the one Finder uses too.
+
+    private func springLoadTarget(_ draggingInfo: NSDraggingInfo) -> FileItem? {
+        let p = convert(draggingInfo.draggingLocation, from: nil)
+        guard let ip = indexPathForItem(at: p), let it = owner?.item(at: ip.item), it.isFolder else { return nil }
+        return it
+    }
+
+    func springLoadingEntered(_ draggingInfo: NSDraggingInfo) -> NSSpringLoadingOptions {
+        guard Theme.settings.springLoadedFolders, springLoadTarget(draggingInfo) != nil else { return .disabled }
+        return .enabled
+    }
+
+    func springLoadingUpdated(_ draggingInfo: NSDraggingInfo) -> NSSpringLoadingOptions {
+        springLoadingEntered(draggingInfo)
+    }
+
+    func springLoadingActivated(_ activated: Bool, draggingInfo: NSDraggingInfo) {
+        guard activated, let it = springLoadTarget(draggingInfo) else { return }
+        fileDelegate?.fileView(open: it)
+    }
+
+    func springLoadingHighlightChanged(_ draggingInfo: NSDraggingInfo) {}
 }
 
 /// The thumbnail grid (⌘3). ⌘+ and ⌘- change the size, per folder.

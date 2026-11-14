@@ -15,7 +15,7 @@ final class ListNode {
 }
 
 /// The outline view: key handling goes to the pane first.
-final class FileOutlineView: NSOutlineView {
+final class FileOutlineView: NSOutlineView, NSSpringLoadingDestination {
     weak var fileDelegate: FileViewDelegate?
     var activePane = true
 
@@ -61,6 +61,32 @@ final class FileOutlineView: NSOutlineView {
         if responder is NSTextField, event?.type == .leftMouseDown { return false }
         return super.validateProposedFirstResponder(responder, for: event)
     }
+
+    // MARK: Spring-loaded folders (Settings > Browser). No delay to set: AppKit follows the
+    // system's own Accessibility > Pointer Control spring-loading delay, the one Finder uses too.
+
+    private func springLoadTarget(_ draggingInfo: NSDraggingInfo) -> ListNode? {
+        let p = convert(draggingInfo.draggingLocation, from: nil)
+        let row = self.row(at: p)
+        guard row >= 0, let n = item(atRow: row) as? ListNode, n.item.isFolder else { return nil }
+        return n
+    }
+
+    func springLoadingEntered(_ draggingInfo: NSDraggingInfo) -> NSSpringLoadingOptions {
+        guard Theme.settings.springLoadedFolders, springLoadTarget(draggingInfo) != nil else { return .disabled }
+        return .enabled
+    }
+
+    func springLoadingUpdated(_ draggingInfo: NSDraggingInfo) -> NSSpringLoadingOptions {
+        springLoadingEntered(draggingInfo)
+    }
+
+    func springLoadingActivated(_ activated: Bool, draggingInfo: NSDraggingInfo) {
+        guard activated, let n = springLoadTarget(draggingInfo) else { return }
+        fileDelegate?.fileView(open: n.item)
+    }
+
+    func springLoadingHighlightChanged(_ draggingInfo: NSDraggingInfo) {}
 }
 
 /// The tree list (⌘5): columns size themselves to their content on every load.
