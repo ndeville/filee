@@ -22,6 +22,18 @@ final class SettingsWindowController: NSWindowController, NSToolbarDelegate {
     private var vimKeysSwitch: NSSwitch?
     private var terminalAppField: NSTextField?
     private var defaultConflictPopup: NSPopUpButton?
+    // Appearance pane
+    private var fontNameField: NSTextField?
+    private var fontSizeSlider: NSSlider?
+    private var uiFontNameField: NSTextField?
+    private var sidebarFontSizeSlider: NSSlider?
+    private var thumbnailSizeSlider: NSSlider?
+    private var newTodayMarkerSwitch: NSSwitch?
+    private var windowCornersPopup: NSPopUpButton?
+    private var cornerRadiusSlider: NSSlider?
+    private var themePopup: NSPopUpButton?
+    private var sizeUnitPopup: NSPopUpButton?
+    private var hideTabBarSwitch: NSSwitch?
 
     private init() {
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 480, height: 300),
@@ -62,6 +74,17 @@ final class SettingsWindowController: NSWindowController, NSToolbarDelegate {
         vimKeysSwitch?.state = Theme.settings.vimKeys ? .on : .off
         terminalAppField?.stringValue = Theme.settings.terminalApp
         if let idx = defaultConflictOptions.firstIndex(of: Theme.settings.defaultConflictChoice) { defaultConflictPopup?.selectItem(at: idx) }
+        fontNameField?.stringValue = Theme.settings.fontName
+        fontSizeSlider?.doubleValue = Theme.settings.fontSize
+        uiFontNameField?.stringValue = Theme.settings.uiFontName
+        sidebarFontSizeSlider?.doubleValue = Theme.settings.sidebarFontSize
+        thumbnailSizeSlider?.doubleValue = Theme.settings.thumbnailSize
+        newTodayMarkerSwitch?.state = Theme.settings.newTodayMarker ? .on : .off
+        if let idx = windowCornersOptions.firstIndex(of: Theme.settings.windowCorners) { windowCornersPopup?.selectItem(at: idx) }
+        cornerRadiusSlider?.doubleValue = Theme.settings.cornerRadius
+        if let idx = themeOptions.firstIndex(of: AppDelegate.shared.state.theme) { themePopup?.selectItem(at: idx) }
+        sizeUnitPopup?.selectItem(at: Theme.settings.sizeUnitBase1000 ? 1 : 0)
+        hideTabBarSwitch?.state = Theme.settings.hideSingleTabBar ? .on : .off
         window?.center()
         showWindow(nil)
         window?.makeKeyAndOrderFront(nil)
@@ -147,7 +170,72 @@ final class SettingsWindowController: NSWindowController, NSToolbarDelegate {
                 store: { self.defaultConflictPopup = $0 },
                 action: #selector(changeDefaultConflictChoice(_:))),
         ])
-        panes["appearance"] = placeholderPane()
+        panes["appearance"] = paneView(title: "Appearance", rows: [
+            labeledTextField(
+                title: "File list font:",
+                initial: Theme.settings.fontName,
+                store: { self.fontNameField = $0 },
+                action: #selector(changeFontName(_:))),
+            labeledSlider(
+                title: "File list font size:",
+                range: 9...28,
+                initial: Theme.settings.fontSize,
+                store: { self.fontSizeSlider = $0 },
+                action: #selector(changeFontSize(_:))),
+            labeledTextField(
+                title: "Interface font:",
+                initial: Theme.settings.uiFontName,
+                store: { self.uiFontNameField = $0 },
+                action: #selector(changeUIFontName(_:))),
+            labeledSlider(
+                title: "Sidebar font size:",
+                range: 10...24,
+                initial: Theme.settings.sidebarFontSize,
+                store: { self.sidebarFontSizeSlider = $0 },
+                action: #selector(changeSidebarFontSize(_:))),
+            labeledSlider(
+                title: "Thumbnail size:",
+                range: 64...384,
+                initial: Theme.settings.thumbnailSize,
+                store: { self.thumbnailSizeSlider = $0 },
+                action: #selector(changeThumbnailSize(_:))),
+            labeledSwitch(
+                title: "New today marker",
+                caption: "Items created today get a small dot in the list, until local midnight.",
+                initial: Theme.settings.newTodayMarker,
+                store: { self.newTodayMarkerSwitch = $0 },
+                action: #selector(toggleNewTodayMarker(_:))),
+            labeledPicker(
+                title: "Window corners:",
+                options: [("rounded", "Rounded"), ("square", "Square")],
+                initial: Theme.settings.windowCorners,
+                store: { self.windowCornersPopup = $0 },
+                action: #selector(changeWindowCorners(_:))),
+            labeledSlider(
+                title: "Corner radius:",
+                range: 0...10,
+                initial: Theme.settings.cornerRadius,
+                store: { self.cornerRadiusSlider = $0 },
+                action: #selector(changeCornerRadius(_:))),
+            labeledPicker(
+                title: "Theme:",
+                options: [("system", "System"), ("light", "Light"), ("dark", "Dark")],
+                initial: AppDelegate.shared.state.theme,
+                store: { self.themePopup = $0 },
+                action: #selector(changeTheme(_:))),
+            labeledPicker(
+                title: "File size unit:",
+                options: [(false, "Base 2 (1 GB = 1024 MB)"), (true, "Base 10 (1 GB = 1000 MB)")],
+                initial: Theme.settings.sizeUnitBase1000,
+                store: { self.sizeUnitPopup = $0 },
+                action: #selector(changeSizeUnit(_:))),
+            labeledSwitch(
+                title: "Hide tab bar when there's a single tab",
+                caption: "The tab bar reappears as soon as a pane has 2 or more tabs.",
+                initial: Theme.settings.hideSingleTabBar,
+                store: { self.hideTabBarSwitch = $0 },
+                action: #selector(toggleHideSingleTabBar(_:))),
+        ])
     }
 
     private func paneView(title: String, rows: [NSView]) -> NSView {
@@ -336,6 +424,56 @@ final class SettingsWindowController: NSWindowController, NSToolbarDelegate {
     @objc private func changeDefaultConflictChoice(_ sender: NSPopUpButton) {
         guard defaultConflictOptions.indices.contains(sender.indexOfSelectedItem) else { return }
         AppDelegate.shared.updateSettings { $0.defaultConflictChoice = self.defaultConflictOptions[sender.indexOfSelectedItem] }
+    }
+
+    @objc private func changeFontName(_ sender: NSTextField) {
+        AppDelegate.shared.updateSettings { $0.fontName = sender.stringValue }
+    }
+
+    @objc private func changeFontSize(_ sender: NSSlider) {
+        AppDelegate.shared.updateSettings { $0.fontSize = sender.doubleValue }
+    }
+
+    @objc private func changeUIFontName(_ sender: NSTextField) {
+        AppDelegate.shared.updateSettings { $0.uiFontName = sender.stringValue }
+    }
+
+    @objc private func changeSidebarFontSize(_ sender: NSSlider) {
+        AppDelegate.shared.updateSettings { $0.sidebarFontSize = sender.doubleValue }
+    }
+
+    @objc private func changeThumbnailSize(_ sender: NSSlider) {
+        AppDelegate.shared.updateSettings { $0.thumbnailSize = sender.doubleValue }
+    }
+
+    @objc private func toggleNewTodayMarker(_ sender: NSSwitch) {
+        AppDelegate.shared.updateSettings { $0.newTodayMarker = sender.state == .on }
+    }
+
+    private let windowCornersOptions = ["rounded", "square"]
+
+    @objc private func changeWindowCorners(_ sender: NSPopUpButton) {
+        guard windowCornersOptions.indices.contains(sender.indexOfSelectedItem) else { return }
+        AppDelegate.shared.updateSettings { $0.windowCorners = self.windowCornersOptions[sender.indexOfSelectedItem] }
+    }
+
+    @objc private func changeCornerRadius(_ sender: NSSlider) {
+        AppDelegate.shared.updateSettings { $0.cornerRadius = sender.doubleValue }
+    }
+
+    private let themeOptions = ["system", "light", "dark"]
+
+    @objc private func changeTheme(_ sender: NSPopUpButton) {
+        guard themeOptions.indices.contains(sender.indexOfSelectedItem) else { return }
+        AppDelegate.shared.setTheme(themeOptions[sender.indexOfSelectedItem])
+    }
+
+    @objc private func changeSizeUnit(_ sender: NSPopUpButton) {
+        AppDelegate.shared.updateSettings { $0.sizeUnitBase1000 = sender.indexOfSelectedItem == 1 }
+    }
+
+    @objc private func toggleHideSingleTabBar(_ sender: NSSwitch) {
+        AppDelegate.shared.updateSettings { $0.hideSingleTabBar = sender.state == .on }
     }
 
     // MARK: NSToolbarDelegate
