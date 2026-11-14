@@ -18,6 +18,10 @@ final class SettingsWindowController: NSWindowController, NSToolbarDelegate {
     private var newTabPathField: NSTextField?
     private var revealInNewTabPopup: NSPopUpButton?
     private var springLoadedSwitch: NSSwitch?
+    // Features pane
+    private var vimKeysSwitch: NSSwitch?
+    private var terminalAppField: NSTextField?
+    private var defaultConflictPopup: NSPopUpButton?
 
     private init() {
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 480, height: 300),
@@ -55,6 +59,9 @@ final class SettingsWindowController: NSWindowController, NSToolbarDelegate {
         newTabPathField?.stringValue = Theme.settings.newTabPath
         revealInNewTabPopup?.selectItem(at: Theme.settings.revealInNewTab ? 1 : 0)
         springLoadedSwitch?.state = Theme.settings.springLoadedFolders ? .on : .off
+        vimKeysSwitch?.state = Theme.settings.vimKeys ? .on : .off
+        terminalAppField?.stringValue = Theme.settings.terminalApp
+        if let idx = defaultConflictOptions.firstIndex(of: Theme.settings.defaultConflictChoice) { defaultConflictPopup?.selectItem(at: idx) }
         window?.center()
         showWindow(nil)
         window?.makeKeyAndOrderFront(nil)
@@ -119,9 +126,28 @@ final class SettingsWindowController: NSWindowController, NSToolbarDelegate {
                 store: { self.springLoadedSwitch = $0 },
                 action: #selector(toggleSpringLoadedFolders(_:))),
         ])
-        for id in ["features", "appearance"] {
-            panes[id] = placeholderPane()
-        }
+        panes["features"] = paneView(title: "Features", rows: [
+            labeledSwitch(
+                title: "Vim keys",
+                caption: "hjkl move and select in the file list, alongside the arrow keys.",
+                initial: Theme.settings.vimKeys,
+                store: { self.vimKeysSwitch = $0 },
+                action: #selector(toggleVimKeys(_:))),
+            labeledTextField(
+                title: "Terminal app:",
+                initial: Theme.settings.terminalApp,
+                store: { self.terminalAppField = $0 },
+                action: #selector(changeTerminalApp(_:))),
+            buttonRow(titles: ["Edit keybindings.json…", "Edit actions.json…"],
+                      actions: [#selector(editKeybindings(_:)), #selector(editActions(_:))]),
+            labeledPicker(
+                title: "Default conflict policy:",
+                options: [(nil, "Always Ask"), (.keepBoth, "Keep Both"), (.replace, "Replace"), (.skip, "Skip")] as [(ConflictChoice?, String)],
+                initial: Theme.settings.defaultConflictChoice,
+                store: { self.defaultConflictPopup = $0 },
+                action: #selector(changeDefaultConflictChoice(_:))),
+        ])
+        panes["appearance"] = placeholderPane()
     }
 
     private func paneView(title: String, rows: [NSView]) -> NSView {
@@ -226,6 +252,19 @@ final class SettingsWindowController: NSWindowController, NSToolbarDelegate {
         return row
     }
 
+    /// A row of plain push buttons, equally spaced — for actions with no value to show (open a file).
+    private func buttonRow(titles: [String], actions: [Selector]) -> NSView {
+        let buttons = zip(titles, actions).map { title, action -> NSButton in
+            let button = NSButton(title: title, target: self, action: action)
+            button.bezelStyle = .rounded
+            return button
+        }
+        let row = NSStackView(views: buttons)
+        row.orientation = .horizontal
+        row.spacing = 8
+        return row
+    }
+
     // MARK: Actions
 
     @objc private func toggleDefaultBrowser(_ sender: NSSwitch) {
@@ -274,6 +313,29 @@ final class SettingsWindowController: NSWindowController, NSToolbarDelegate {
 
     @objc private func toggleSpringLoadedFolders(_ sender: NSSwitch) {
         AppDelegate.shared.updateSettings { $0.springLoadedFolders = sender.state == .on }
+    }
+
+    @objc private func toggleVimKeys(_ sender: NSSwitch) {
+        AppDelegate.shared.updateSettings { $0.vimKeys = sender.state == .on }
+    }
+
+    @objc private func changeTerminalApp(_ sender: NSTextField) {
+        AppDelegate.shared.updateSettings { $0.terminalApp = sender.stringValue }
+    }
+
+    @objc private func editKeybindings(_ sender: NSButton) {
+        AppDelegate.shared.openConfig(AppDelegate.shared.config.keybindingsURL)
+    }
+
+    @objc private func editActions(_ sender: NSButton) {
+        AppDelegate.shared.openConfig(AppDelegate.shared.config.actionsURL)
+    }
+
+    private let defaultConflictOptions: [ConflictChoice?] = [nil, .keepBoth, .replace, .skip]
+
+    @objc private func changeDefaultConflictChoice(_ sender: NSPopUpButton) {
+        guard defaultConflictOptions.indices.contains(sender.indexOfSelectedItem) else { return }
+        AppDelegate.shared.updateSettings { $0.defaultConflictChoice = self.defaultConflictOptions[sender.indexOfSelectedItem] }
     }
 
     // MARK: NSToolbarDelegate

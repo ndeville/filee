@@ -105,7 +105,9 @@ final class ActionRunner {
         return (p.terminationStatus, String(out.suffix(4000)))
     }
 
-    /// Terminal actions: a small script in ~/.filee/logs runs the command in Ghostty, then waits for a key.
+    /// Terminal actions: a small script in ~/.filee/logs runs the command in the configured
+    /// terminal app (`Theme.settings.terminalApp`, same setting `BrowserWindowController.openTerminal(at:)`
+    /// reads), then waits for a key.
     private func runInTerminal(_ calls: [[String]], action: CustomAction, browser: BrowserWindowController) {
         let lines = calls.map { argv in argv.map(Self.shellQuote).joined(separator: " ") }
         let script = """
@@ -126,16 +128,21 @@ final class ActionRunner {
             browser.showMessage("❌ \(error.localizedDescription)", error: true)
             return
         }
-        let ghostty = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.mitchellh.ghostty")
-        if let ghostty {
+        let app = Theme.settings.terminalApp
+        let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: app == "Ghostty" ? "com.mitchellh.ghostty" : app)
+            ?? NSWorkspace.shared.fullPath(forApplication: app).map { URL(fileURLWithPath: $0) }
+        if app == "Ghostty", let appURL {
+            // Ghostty doesn't run a .command file on open the way Terminal/iTerm do: tell it explicitly.
             let p = Process()
             p.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-            p.arguments = ["-na", ghostty.path, "--args", "-e", url.path]
+            p.arguments = ["-na", appURL.path, "--args", "-e", url.path]
             try? p.run()
+        } else if let appURL {
+            NSWorkspace.shared.open([url], withApplicationAt: appURL, configuration: NSWorkspace.OpenConfiguration())
         } else {
             NSWorkspace.shared.open(url)
         }
-        browser.showMessage("▶ \(action.name) runs in Ghostty")
+        browser.showMessage("▶ \(action.name) runs in \(app)")
         // Scripts are removed after a day.
         cleanOldScripts(in: dir)
     }
