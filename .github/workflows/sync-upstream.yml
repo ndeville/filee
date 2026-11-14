@@ -1,0 +1,90 @@
+name: Sync upstream
+
+# Checks ndeville/filee for new commits and opens a PR (clean merge) or an
+# Issue (conflict). Never merges straight into main on its own — see
+# CLAUDE.md's "Syncing with upstream" for the manual steps after.
+#
+# Needs repo setting Settings > Actions > General > "Allow GitHub Actions to
+# create and approve pull requests" on, or PR creation below fails silently.
+# GitHub disables scheduled workflows after 60 days with no repo activity;
+# workflow_dispatch lets you re-trigger by hand if that happens.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays, 06:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  sync:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch upstream
+        run: |
+          git remote add upstream https://github.com/ndeville/filee.git
+          git fetch upstream main
+
+      - name: Check for new upstream commits
+        id: check
+        run: echo "count=$(git rev-list --count main..upstream/main)" >> "$GITHUB_OUTPUT"
+
+      - name: Attempt merge
+        if: steps.check.outputs.count != '0'
+        id: merge
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          branch="sync-upstream"
+          git checkout -B "$branch"
+          if git merge upstream/main --no-edit; then
+            git push origin "$branch" --force
+            echo "clean=true" >> "$GITHUB_OUTPUT"
+          else
+            git merge --abort
+            echo "clean=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+
+      - name: Open or reuse the sync PR
+        if: steps.check.outputs.count != '0' && steps.merge.outputs.clean == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          existing=$(gh pr list --head "${{ steps.merge.outputs.branch }}" --json number --jq '.[0].number')
+          if [ -z "$existing" ]; then
+            gh pr create --title "Sync with upstream" --base main --head "${{ steps.merge.outputs.branch }}" --body "$(cat <<'EOF'
+          Automated merge of ndeville/filee@main into this fork.
+
+          Before merging this PR, check by hand:
+          - CLAUDE.md / README.md / CHANGELOG.md: keep this fork's version where git auto-merged over them
+          - assets/benchmark/results.json and the 2 SVGs: keep this fork's own numbers, not upstream's
+          - A clean git merge doesn't prove the build still works — the required "test" check on this PR does
+          EOF
+          )"
+          fi
+
+      - name: Open or reuse the conflict issue
+        if: steps.check.outputs.count != '0' && steps.merge.outputs.clean == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          existing=$(gh issue list --search "Upstream sync has conflicts in:title" --state open --json number --jq '.[0].number')
+          if [ -z "$existing" ]; then
+            gh issue create --title "Upstream sync has conflicts" --body "$(cat <<'EOF'
+          ndeville/filee@main has ${{ steps.check.outputs.count }} new commit(s) that don't merge cleanly.
+
+          Resolve locally:
+
+              git fetch upstream
+              git merge upstream/main
+          EOF
+          )"
+          fi

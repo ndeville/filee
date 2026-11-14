@@ -56,7 +56,7 @@ cd FileeCore && swift test
 
 ## Rules for this repo
 
-- Push every change: `git add -A && git commit && git push`. Remote: `github.com/ndeville/filee`.
+- Push every change: `git add -A && git commit && git push`. This fork's remote (`origin`): `github.com/djspiceroute/filee`. Upstream (`ndeville/filee`) is a separate remote, fetched but never pushed to — see "Syncing with upstream" below.
 - Run `swift test` and `python3 qa.py` before a commit. Both must pass.
 - Never point a QA run that writes at real folders. `qa.py` builds fixtures. For timing runs on real folders, set `FILEE_READONLY=1`.
 - QA runs in the background: it never activates Filee, keeps its window at 1400x900 (not resizable, so Amethyst doesn't tile it), drops real key presses, and uses a private pasteboard. Keep it that way: Nic works while QA runs.
@@ -75,7 +75,15 @@ cd FileeCore && swift test
 - Nic's global App Shortcuts: ⇧⌘F is Find, ⌥⌘F is Bring All to Front. Filee has neither menu item, so the key map gets both.
 - ⌘D and ⌘F are Copy and Paste through Nic's global App Shortcuts on the **Edit > Copy** and **Edit > Paste** menu titles. Never bind ⌘D or ⌘F in the key map, never rename those menu items.
 
-## Agent interface
+## Syncing with upstream
+
+`upstream` (`github.com/ndeville/filee`) is fetched, never pushed to. A weekly scheduled GitHub Action (`.github/workflows/sync-upstream.yml`) fetches it and, on new commits, merges into a throwaway branch: a clean merge opens a PR (gated by the existing required `test` check), a conflicting one opens an Issue. It never pushes a merge to `main` on its own.
+
+- Merge, don't rebase: `main` is already pushed and shared.
+- `CLAUDE.md`, `README.md`, `CHANGELOG.md` are fork-specific: on conflict, keep the fork's version, fold in only genuinely new upstream content by hand.
+- `assets/benchmark/results.json` and the 2 SVGs are this machine's measurements: on conflict, keep the fork's own (`git checkout --ours assets/benchmark/`). Never take upstream's numbers.
+- A clean merge doesn't prove the build still works: run `swift test` and `python3 qa.py` after every merge, same as any other commit. Regenerate the Xcode project (`build.sh` does this) rather than trusting a stale one — a merge can add source files `project.yml`'s globs don't yet cover.
+- The installed app doesn't update itself (no Sparkle, no notarisation yet): after a sync lands on `main`, `git pull && ./build.sh --test --install`.
 
 Agents (Claude Code, NicAI CC tasks) drive Filee through the `filee` CLI (`filee.py`, linked at `~/.local/bin/filee` by `build.sh --install`). Every command takes `--json` and prints 1 JSON document; errors carry `ok: false`, `error` and `hint`, with exit codes 1 (error), 2 (usage), 3 (refused) and 4 (Filee isn't running). Writes go through `filee://` URLs opened in the background with the running copy (`open -g -a`) and a request id, and the CLI confirms each one through `~/.filee/run/live.json`, which the app rewrites on every navigation, selection and transfer. Nothing comes to the front unless the command has `--show`.
 
