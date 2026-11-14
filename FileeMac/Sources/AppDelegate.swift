@@ -56,7 +56,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         lastKey = w
         launchMilliseconds = Int((ProcessInfo.processInfo.systemUptime - launchStart) * 1000)
         launched = true
-        for url in pendingOpen { reveal(url) }
+        revealAll(pendingOpen)
         pendingOpen = []
         for url in pendingActions { route(url) }
         pendingActions = []
@@ -89,7 +89,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             pendingOpen += urls
             return
         }
-        for u in urls { reveal(u) }
+        revealAll(urls)
     }
 
     @objc private func handleReveal(_ event: NSAppleEventDescriptor, reply: NSAppleEventDescriptor) {
@@ -100,7 +100,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if count > 0 {
             for i in 1...count { if let u = list.atIndex(i)?.coerce(toDescriptorType: typeFileURL)?.fileURLValue { urls.append(u) } }
         }
-        for u in urls { reveal(u) }
+        revealAll(urls)
         summon()
     }
 
@@ -119,6 +119,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             let folder = url.deletingLastPathComponent().path
             if newTab { w.activePane.newTab(path: folder, select: [url.path]) } else { w.activePane.navigate(to: folder, select: [url.path]) }
+        }
+        if front { w.window?.makeKeyAndOrderFront(nil) }
+    }
+
+    /// Several paths at once (Finder/an app's "Reveal in Filee" on a multi-file selection, or an
+    /// Apple Event with several items): files that share a parent folder open together, in 1 tab/pane
+    /// with every sibling selected — not 1 tab per file, which `reveal(_:)` called in a loop would do
+    /// whenever "reveal in new tab" is on.
+    func revealAll(_ urls: [URL], front: Bool = true) {
+        guard !urls.isEmpty else { return }
+        guard urls.count > 1 else { reveal(urls[0], front: front); return }
+        guard let w = activeWindow else { return }
+        var filesByParent: [String: [String]] = [:]
+        for url in urls {
+            var isDir: ObjCBool = false
+            FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
+            let isFolder = isDir.boolValue && !DirectoryLister.packageExtensions.contains(url.pathExtension.lowercased())
+            if isFolder {
+                if filesByParent[url.path] == nil { filesByParent[url.path] = [] }
+            } else {
+                filesByParent[url.deletingLastPathComponent().path, default: []].append(url.path)
+            }
+        }
+        let newTab = Theme.settings.revealInNewTab
+        for (folder, files) in filesByParent {
+            if newTab { w.activePane.newTab(path: folder, select: files) } else { w.activePane.navigate(to: folder, select: files) }
         }
         if front { w.window?.makeKeyAndOrderFront(nil) }
     }

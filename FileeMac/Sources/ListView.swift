@@ -72,13 +72,36 @@ final class FileOutlineView: NSOutlineView, NSSpringLoadingDestination {
         return n
     }
 
+    /// The whole view is 1 spring-loading destination covering every row, so AppKit's own hover
+    /// timer doesn't restart on its own when the drag slides from one folder onto another — this
+    /// view has to notice the target changed and tell AppKit to restart it.
+    private var lastSpringLoadPath: String?
+
     func springLoadingEntered(_ draggingInfo: NSDraggingInfo) -> NSSpringLoadingOptions {
-        guard Theme.settings.springLoadedFolders, springLoadTarget(draggingInfo) != nil else { return .disabled }
+        let target = springLoadTarget(draggingInfo)
+        lastSpringLoadPath = target?.item.path
+        guard Theme.settings.springLoadedFolders, target != nil else { return .disabled }
         return .enabled
     }
 
     func springLoadingUpdated(_ draggingInfo: NSDraggingInfo) -> NSSpringLoadingOptions {
-        springLoadingEntered(draggingInfo)
+        guard Theme.settings.springLoadedFolders else { return .disabled }
+        guard let target = springLoadTarget(draggingInfo) else {
+            lastSpringLoadPath = nil
+            return .disabled
+        }
+        guard target.item.path == lastSpringLoadPath else {
+            // A different folder than the one AppKit has been timing: disable for this update so
+            // it restarts the hover delay from scratch, instead of opening on the previous folder's
+            // almost-elapsed timer.
+            lastSpringLoadPath = target.item.path
+            return .disabled
+        }
+        return .enabled
+    }
+
+    func springLoadingExited(_ draggingInfo: NSDraggingInfo) {
+        lastSpringLoadPath = nil
     }
 
     func springLoadingActivated(_ activated: Bool, draggingInfo: NSDraggingInfo) {

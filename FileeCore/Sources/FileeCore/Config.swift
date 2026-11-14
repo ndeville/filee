@@ -115,7 +115,9 @@ public struct Settings: Codable, Equatable, Sendable {
         quitFinderOnLaunch = try c.decodeIfPresent(Bool.self, forKey: .quitFinderOnLaunch) ?? d.quitFinderOnLaunch
         revealInNewTab = try c.decodeIfPresent(Bool.self, forKey: .revealInNewTab) ?? d.revealInNewTab
         springLoadedFolders = try c.decodeIfPresent(Bool.self, forKey: .springLoadedFolders) ?? d.springLoadedFolders
-        defaultConflictChoice = try c.decodeIfPresent(ConflictChoice.self, forKey: .defaultConflictChoice) ?? d.defaultConflictChoice
+        // A misspelled value here (hand-edited settings.json) falls back to "always ask" rather than
+        // failing the whole file's decode — every other field still needs to come through.
+        defaultConflictChoice = (try? c.decodeIfPresent(ConflictChoice.self, forKey: .defaultConflictChoice))?.flatMap { $0 } ?? d.defaultConflictChoice
         sizeUnitBase1000 = try c.decodeIfPresent(Bool.self, forKey: .sizeUnitBase1000) ?? d.sizeUnitBase1000
         hideSingleTabBar = try c.decodeIfPresent(Bool.self, forKey: .hideSingleTabBar) ?? d.hideSingleTabBar
     }

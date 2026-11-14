@@ -52,6 +52,9 @@ def build_fixtures(base: Path) -> dict:
     (a / ".hidden").write_text("h", encoding="utf-8")
     (a / "sub" / "inner.txt").write_text("inner", encoding="utf-8")
     (a / "sub" / "deeper" / "deep.txt").write_text("deep", encoding="utf-8")
+    # Differentiates base-1000 ("1.5 MB") from base-2 ("1.4 MB") display with no rounding-boundary
+    # ambiguity either way (see FileeCore's testFormatSizeBase1000).
+    (b / "sized.bin").write_bytes(b"\0" * 1_500_000)
     for i, color in enumerate([(231, 76, 60), (11, 107, 203), (47, 138, 58)], start=1):
         (a / f"IMG0{i}.png").write_bytes(png_bytes(64, 48, color))
     pics = base / "pics"
@@ -338,6 +341,20 @@ def suites(fx: dict) -> dict:
             {"op": "expect", "label": "revealInNewTab: revealing a file opens a new tab at its parent folder, with the file selected",
              "tabs": 2, "path": A, "selected": ["alpha.txt"]},
             {"op": "key", "keys": "cmd+w"},
+            # Revealing several files that share a parent folder opens 1 tab with every file selected,
+            # not 1 tab per file.
+            {"op": "revealPaths", "paths": [A + "/alpha.txt", A + "/beta.md"]},
+            {"op": "wait", "ms": 300},
+            {"op": "expect", "label": "revealInNewTab: revealing 2 files in the same folder opens 1 new tab, both selected",
+             "tabs": 2, "path": A, "selected": ["alpha.txt", "beta.md"]},
+            {"op": "key", "keys": "cmd+w"},
+            # sizeUnitBase1000: the selection status bar switches units live, no reopen needed.
+            {"op": "navigate", "pane": 0, "path": B},
+            {"op": "select", "names": ["sized.bin"]},
+            {"op": "expect", "label": "file size shows base-2 units by default", "statusBar": "1.4 MB"},
+            {"op": "settings", "set": {"sizeUnitBase1000": True}},
+            {"op": "expect", "label": "sizeUnitBase1000: the status bar switches to base-10 units live", "statusBar": "1.5 MB"},
+            {"op": "settings", "set": {"sizeUnitBase1000": False}},
             # The CLI's own "filee reveal" (filee://reveal, the same route qa.py's "cli" suite exercises)
             # always uses the active pane, even with revealInNewTab on — it's explicitly exempted.
             {"op": "navigate", "pane": 0, "path": B},

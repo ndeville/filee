@@ -187,6 +187,15 @@ final class QAHarness {
             record(step)
             done()
 
+        case "revealPaths":
+            // Several paths at once (Finder's "Reveal in Filee" on a multi-file selection) —
+            // calls AppDelegate.revealAll(_:) directly, the way application(_:open:) does with several URLs.
+            if let paths = step["paths"] as? [String] {
+                AppDelegate.shared.revealAll(paths.map { URL(fileURLWithPath: $0.expandingHome) }, front: true)
+            }
+            record(step)
+            done()
+
         case "infoClose":
             InfoPanel.shared.close()
             record(step)

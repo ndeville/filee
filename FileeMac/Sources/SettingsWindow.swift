@@ -31,6 +31,10 @@ final class SettingsWindowController: NSWindowController, NSToolbarDelegate {
     private var newTodayMarkerSwitch: NSSwitch?
     private var windowCornersPopup: NSPopUpButton?
     private var cornerRadiusSlider: NSSlider?
+    private var fontSizeValueLabel: NSTextField?
+    private var sidebarFontSizeValueLabel: NSTextField?
+    private var thumbnailSizeValueLabel: NSTextField?
+    private var cornerRadiusValueLabel: NSTextField?
     private var themePopup: NSPopUpButton?
     private var sizeUnitPopup: NSPopUpButton?
     private var hideTabBarSwitch: NSSwitch?
@@ -76,12 +80,16 @@ final class SettingsWindowController: NSWindowController, NSToolbarDelegate {
         if let idx = defaultConflictOptions.firstIndex(of: Theme.settings.defaultConflictChoice) { defaultConflictPopup?.selectItem(at: idx) }
         fontNameField?.stringValue = Theme.settings.fontName
         fontSizeSlider?.doubleValue = Theme.settings.fontSize
+        fontSizeValueLabel?.stringValue = "\(Int(Theme.settings.fontSize.rounded()))"
         uiFontNameField?.stringValue = Theme.settings.uiFontName
         sidebarFontSizeSlider?.doubleValue = Theme.settings.sidebarFontSize
+        sidebarFontSizeValueLabel?.stringValue = "\(Int(Theme.settings.sidebarFontSize.rounded()))"
         thumbnailSizeSlider?.doubleValue = Theme.settings.thumbnailSize
+        thumbnailSizeValueLabel?.stringValue = "\(Int(Theme.settings.thumbnailSize.rounded()))"
         newTodayMarkerSwitch?.state = Theme.settings.newTodayMarker ? .on : .off
         if let idx = windowCornersOptions.firstIndex(of: Theme.settings.windowCorners) { windowCornersPopup?.selectItem(at: idx) }
         cornerRadiusSlider?.doubleValue = Theme.settings.cornerRadius
+        cornerRadiusValueLabel?.stringValue = "\(Int(Theme.settings.cornerRadius.rounded()))"
         if let idx = themeOptions.firstIndex(of: AppDelegate.shared.state.theme) { themePopup?.selectItem(at: idx) }
         sizeUnitPopup?.selectItem(at: Theme.settings.sizeUnitBase1000 ? 1 : 0)
         hideTabBarSwitch?.state = Theme.settings.hideSingleTabBar ? .on : .off
@@ -181,6 +189,7 @@ final class SettingsWindowController: NSWindowController, NSToolbarDelegate {
                 range: 9...28,
                 initial: Theme.settings.fontSize,
                 store: { self.fontSizeSlider = $0 },
+                valueLabelStore: { self.fontSizeValueLabel = $0 },
                 action: #selector(changeFontSize(_:))),
             labeledTextField(
                 title: "Interface font:",
@@ -192,12 +201,14 @@ final class SettingsWindowController: NSWindowController, NSToolbarDelegate {
                 range: 10...24,
                 initial: Theme.settings.sidebarFontSize,
                 store: { self.sidebarFontSizeSlider = $0 },
+                valueLabelStore: { self.sidebarFontSizeValueLabel = $0 },
                 action: #selector(changeSidebarFontSize(_:))),
             labeledSlider(
                 title: "Thumbnail size:",
                 range: 64...384,
                 initial: Theme.settings.thumbnailSize,
                 store: { self.thumbnailSizeSlider = $0 },
+                valueLabelStore: { self.thumbnailSizeValueLabel = $0 },
                 action: #selector(changeThumbnailSize(_:))),
             labeledSwitch(
                 title: "New today marker",
@@ -216,6 +227,7 @@ final class SettingsWindowController: NSWindowController, NSToolbarDelegate {
                 range: 0...10,
                 initial: Theme.settings.cornerRadius,
                 store: { self.cornerRadiusSlider = $0 },
+                valueLabelStore: { self.cornerRadiusValueLabel = $0 },
                 action: #selector(changeCornerRadius(_:))),
             labeledPicker(
                 title: "Theme:",
@@ -231,7 +243,8 @@ final class SettingsWindowController: NSWindowController, NSToolbarDelegate {
                 action: #selector(changeSizeUnit(_:))),
             labeledSwitch(
                 title: "Hide tab bar when there's a single tab",
-                caption: "The tab bar reappears as soon as a pane has 2 or more tabs.",
+                caption: "Hides the tab title, not the row itself: the type-filter buttons, when shown, "
+                    + "keep their place there. The bar reappears as soon as a pane has 2 or more tabs.",
                 initial: Theme.settings.hideSingleTabBar,
                 store: { self.hideTabBarSwitch = $0 },
                 action: #selector(toggleHideSingleTabBar(_:))),
@@ -310,15 +323,23 @@ final class SettingsWindowController: NSWindowController, NSToolbarDelegate {
         return row
     }
 
-    /// 1 labeled slider with a numeric value label, title above.
+    /// 1 labeled slider with a numeric value label, title above. Commits (and fires `action`) only
+    /// on mouse-up, not on every drag tick — each commit writes settings.json and refreshes every
+    /// open window, so a continuous slider would do that dozens of times per drag.
     private func labeledSlider(title: String, range: ClosedRange<Double>, initial: Double,
-                                store: (NSSlider) -> Void, action: Selector) -> NSView {
+                                store: (NSSlider) -> Void, valueLabelStore: (NSTextField) -> Void,
+                                action: Selector) -> NSView {
         let slider = NSSlider(value: initial, minValue: range.lowerBound, maxValue: range.upperBound, target: self, action: action)
+        slider.isContinuous = false
         slider.translatesAutoresizingMaskIntoConstraints = false
         slider.widthAnchor.constraint(equalToConstant: 180).isActive = true
         store(slider)
+        let valueLabel = NSTextField(labelWithString: "\(Int(initial.rounded()))")
+        valueLabel.translatesAutoresizingMaskIntoConstraints = false
+        valueLabel.widthAnchor.constraint(equalToConstant: 32).isActive = true
+        valueLabelStore(valueLabel)
         let titleLabel = NSTextField(labelWithString: title)
-        let row = NSStackView(views: [titleLabel, slider])
+        let row = NSStackView(views: [titleLabel, slider, valueLabel])
         row.orientation = .horizontal
         row.spacing = 8
         return row
@@ -431,7 +452,10 @@ final class SettingsWindowController: NSWindowController, NSToolbarDelegate {
     }
 
     @objc private func changeFontSize(_ sender: NSSlider) {
-        AppDelegate.shared.updateSettings { $0.fontSize = sender.doubleValue }
+        let value = sender.doubleValue.rounded()
+        sender.doubleValue = value
+        fontSizeValueLabel?.stringValue = "\(Int(value))"
+        AppDelegate.shared.updateSettings { $0.fontSize = value }
     }
 
     @objc private func changeUIFontName(_ sender: NSTextField) {
@@ -439,11 +463,17 @@ final class SettingsWindowController: NSWindowController, NSToolbarDelegate {
     }
 
     @objc private func changeSidebarFontSize(_ sender: NSSlider) {
-        AppDelegate.shared.updateSettings { $0.sidebarFontSize = sender.doubleValue }
+        let value = sender.doubleValue.rounded()
+        sender.doubleValue = value
+        sidebarFontSizeValueLabel?.stringValue = "\(Int(value))"
+        AppDelegate.shared.updateSettings { $0.sidebarFontSize = value }
     }
 
     @objc private func changeThumbnailSize(_ sender: NSSlider) {
-        AppDelegate.shared.updateSettings { $0.thumbnailSize = sender.doubleValue }
+        let value = sender.doubleValue.rounded()
+        sender.doubleValue = value
+        thumbnailSizeValueLabel?.stringValue = "\(Int(value))"
+        AppDelegate.shared.updateSettings { $0.thumbnailSize = value }
     }
 
     @objc private func toggleNewTodayMarker(_ sender: NSSwitch) {
@@ -458,7 +488,10 @@ final class SettingsWindowController: NSWindowController, NSToolbarDelegate {
     }
 
     @objc private func changeCornerRadius(_ sender: NSSlider) {
-        AppDelegate.shared.updateSettings { $0.cornerRadius = sender.doubleValue }
+        let value = sender.doubleValue.rounded()
+        sender.doubleValue = value
+        cornerRadiusValueLabel?.stringValue = "\(Int(value))"
+        AppDelegate.shared.updateSettings { $0.cornerRadius = value }
     }
 
     private let themeOptions = ["system", "light", "dark"]

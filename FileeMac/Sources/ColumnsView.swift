@@ -36,13 +36,35 @@ final class ColumnTableView: NSTableView, NSSpringLoadingDestination {
         return r
     }
 
+    /// The whole table is 1 spring-loading destination covering every row, so AppKit's own hover
+    /// timer doesn't restart on its own when the drag slides from one row onto another — this view
+    /// has to notice the target changed and tell AppKit to restart it.
+    private var lastSpringLoadRow: Int?
+
     func springLoadingEntered(_ draggingInfo: NSDraggingInfo) -> NSSpringLoadingOptions {
-        guard Theme.settings.springLoadedFolders, springLoadRow(draggingInfo) != nil else { return .disabled }
+        let row = springLoadRow(draggingInfo)
+        lastSpringLoadRow = row
+        guard Theme.settings.springLoadedFolders, row != nil else { return .disabled }
         return .enabled
     }
 
     func springLoadingUpdated(_ draggingInfo: NSDraggingInfo) -> NSSpringLoadingOptions {
-        springLoadingEntered(draggingInfo)
+        guard Theme.settings.springLoadedFolders else { return .disabled }
+        guard let row = springLoadRow(draggingInfo) else {
+            lastSpringLoadRow = nil
+            return .disabled
+        }
+        guard row == lastSpringLoadRow else {
+            // A different row than the one AppKit has been timing: disable for this update so it
+            // restarts the hover delay from scratch.
+            lastSpringLoadRow = row
+            return .disabled
+        }
+        return .enabled
+    }
+
+    func springLoadingExited(_ draggingInfo: NSDraggingInfo) {
+        lastSpringLoadRow = nil
     }
 
     func springLoadingActivated(_ activated: Bool, draggingInfo: NSDraggingInfo) {

@@ -556,6 +556,16 @@ final class CoreTests: XCTestCase {
         XCTAssertNil(old.defaultConflictChoice)
     }
 
+    /// A hand-edited settings.json with a misspelled defaultConflictChoice (e.g. "keep-both"
+    /// instead of "keepBoth") must not fail the whole file — every other field, and every other
+    /// use of settings.json, still needs to decode.
+    func testMalformedDefaultConflictChoiceDoesNotFailWholeDecode() throws {
+        let decode = { (json: String) in try JSONDecoder().decode(Settings.self, from: Data(json.utf8)) }
+        let s = try decode(#"{"defaultConflictChoice": "keep-both", "fontSize": 16}"#)
+        XCTAssertNil(s.defaultConflictChoice)
+        XCTAssertEqual(s.fontSize, 16)
+    }
+
     func testKeybindingParser() {
         let defaults = [KeyBinding(chords: [KeyChord("cmd+r")!], command: "rename")]
         let json = #"[{"key": "cmd+j k", "command": "jump", "args": "~/x"}, {"key": "cmd+r", "command": "-rename"}]"#
