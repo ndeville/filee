@@ -419,10 +419,13 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
         loadCurrent(select: tab.savedSelection)
     }
 
-    func newTab(path: String? = nil) {
+    /// `select`: paths to select once the new tab's folder is listed (mirrors `navigate(to:select:)`).
+    func newTab(path: String? = nil, select: [String] = []) {
         let p = canonicalFolder(path ?? Theme.settings.newTabPath.expandingHome)
         if fileView != nil { tab.savedSelection = fileView.selectedItems.map(\.path) }
-        tabs.insert(TabModel(path: p, view: AppDelegate.shared.view(for: p)), at: activeTab + 1)
+        let newTabModel = TabModel(path: p, view: AppDelegate.shared.view(for: p))
+        newTabModel.savedSelection = select
+        tabs.insert(newTabModel, at: activeTab + 1)
         showTab(activeTab + 1)
         window.stateChanged()
     }

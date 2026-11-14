@@ -106,14 +106,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// A folder opens in the active pane; a file opens its folder with the file selected.
     /// `front: false` (an agent's background URL) leaves the window where it is.
-    func reveal(_ url: URL, front: Bool = true) {
+    /// `respectTabPreference: false` (the agent CLI's `filee reveal`, via `route(_:)`) always uses the
+    /// active pane, regardless of `Settings.revealInNewTab` — its documented contract doesn't change.
+    func reveal(_ url: URL, front: Bool = true, respectTabPreference: Bool = true) {
         guard let w = activeWindow else { return }
         var isDir: ObjCBool = false
         FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
-        if isDir.boolValue, !DirectoryLister.packageExtensions.contains(url.pathExtension.lowercased()) {
-            w.activePane.navigate(to: url.path)
+        let isFolder = isDir.boolValue && !DirectoryLister.packageExtensions.contains(url.pathExtension.lowercased())
+        let newTab = respectTabPreference && Theme.settings.revealInNewTab
+        if isFolder {
+            if newTab { w.activePane.newTab(path: url.path) } else { w.activePane.navigate(to: url.path) }
         } else {
-            w.activePane.navigate(to: url.deletingLastPathComponent().path, select: [url.path])
+            let folder = url.deletingLastPathComponent().path
+            if newTab { w.activePane.newTab(path: folder, select: [url.path]) } else { w.activePane.navigate(to: folder, select: [url.path]) }
         }
         if front { w.window?.makeKeyAndOrderFront(nil) }
     }
@@ -137,7 +142,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         switch action {
         case "reveal":
             ok = exists && activeWindow != nil
-            if ok { reveal(URL(fileURLWithPath: paths[0]), front: front) }
+            if ok { reveal(URL(fileURLWithPath: paths[0]), front: front, respectTabPreference: false) }
         case "new-tab":
             var isDir: ObjCBool = false
             let folder = paths.first.map { FileManager.default.fileExists(atPath: $0, isDirectory: &isDir) && isDir.boolValue } ?? true

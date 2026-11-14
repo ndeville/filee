@@ -177,6 +177,16 @@ final class QAHarness {
             record(step, ["path": wc.activePane.path])
             done()
 
+        case "revealPath":
+            // Simulates a real OS-triggered reveal (Finder's "Reveal in Filee", or any app handing Filee
+            // a path) — calls AppDelegate.reveal(_:) directly, the way application(_:open:) does, bypassing
+            // the filee:// router entirely (the "url" op above is the CLI's own path, a different test).
+            if let path = step["path"] as? String {
+                AppDelegate.shared.reveal(URL(fileURLWithPath: path.expandingHome), front: true)
+            }
+            record(step)
+            done()
+
         case "infoClose":
             InfoPanel.shared.close()
             record(step)

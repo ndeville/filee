@@ -324,6 +324,27 @@ def suites(fx: dict) -> dict:
             {"op": "navigate", "pane": 0, "path": pics},
             {"op": "expect", "label": "an image folder opens as thumbnails", "view": "thumbnails"},
             {"op": "screenshot", "name": "08-auto-thumbnails"},
+            # revealInNewTab: an OS-triggered reveal (Finder/default-browser, simulated with "revealPath")
+            # opens a new tab instead of using the active pane, when the setting is on.
+            {"op": "navigate", "pane": 0, "path": A},
+            {"op": "settings", "set": {"revealInNewTab": True}},
+            {"op": "revealPath", "path": A + "/sub"},
+            {"op": "wait", "ms": 300},
+            {"op": "expect", "label": "revealInNewTab: revealing a folder opens a new tab at that folder",
+             "tabs": 2, "path": A + "/sub"},
+            {"op": "key", "keys": "cmd+w"},
+            {"op": "revealPath", "path": A + "/alpha.txt"},
+            {"op": "wait", "ms": 300},
+            {"op": "expect", "label": "revealInNewTab: revealing a file opens a new tab at its parent folder, with the file selected",
+             "tabs": 2, "path": A, "selected": ["alpha.txt"]},
+            {"op": "key", "keys": "cmd+w"},
+            # The CLI's own "filee reveal" (filee://reveal, the same route qa.py's "cli" suite exercises)
+            # always uses the active pane, even with revealInNewTab on — it's explicitly exempted.
+            {"op": "navigate", "pane": 0, "path": B},
+            {"op": "url", "url": f"filee://reveal?path={A}&rid=qarid-tab-exempt"},
+            {"op": "wait", "ms": 300},
+            {"op": "expect", "label": "filee://reveal (the CLI's path) still uses the active pane, revealInNewTab notwithstanding",
+             "tabs": 1, "path": A},
         ],
         "filter": [
             {"op": "navigate", "pane": 0, "path": A},
