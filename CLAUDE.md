@@ -134,9 +134,11 @@ filee tabs --json                     # every pane's tabs
 
 - 10th October 2026, measured with `qa.py`: launch 140-220 ms, 10,000-file folder listed in 66-83 ms (11 ms of system calls), filter keystroke 7-8 ms, 72 MB footprint idle with 2 panes and 5 tabs. Path Finder: 305 MB footprint.
 - Real folders, read-only run: a mail export folder on Dropbox (21,361 files) lists in 250 ms (90 ms system calls on Dropbox), filter 54 ms, footprint peaks at 160-190 MB and settles at about 112 MB after leaving it. Freed malloc memory isn't returned by `malloc_zone_pressure_relief`.
-- 14th October 2026, `benchmark.py` (folders of 10,000 files, median of 5): launch to files on screen 1.3 s (Path Finder 5.4 s,
-  ForkLift 3.5 s), open a folder 465 ms (Finder 634 ms, Path Finder 2.8 s, ForkLift 1.6 s), memory 134 MB (Finder 200 MB,
-  Path Finder 260 MB, ForkLift 208 MB). An accessibility probe slowed the apps it measured (ForkLift by 1 to 2 s): measure from the screen.
+- 14th November 2026, `benchmark.py` (folders of 10,000 files, median of 5, ForkLift not installed): launch to files on
+  screen 607 ms (Path Finder 4.3 s), open a folder 230 ms (Finder 1.4 s, Path Finder 1.8 s), memory 70 MB (Finder 94 MB,
+  Path Finder 172 MB). Measured from the screen (ScreenCaptureKit + Vision OCR), so the probe never slows the app it times.
+  Path Finder and ForkLift (Setapp installs) hang at launch, with no window and no menu bar, until Setapp's own daemon
+  answers their license check: `benchmark.py` starts Setapp.app first when either is a Setapp install.
 - Filee's open time: the open event arrives about 100 ms after `open`, the listing and view take about 110 ms, then about 250 ms
   pass before the next main-queue turn (layout and display of the new rows). That last part is the place to make it faster.
 - `~/Dropbox` is a plain folder (legacy Dropbox), not File Provider: no TCC prompt.
