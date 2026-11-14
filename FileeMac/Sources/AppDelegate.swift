@@ -200,13 +200,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard !initial else { return }
         let problems = [err, aerr].compactMap { $0 } + Keymap.shared.errors
         if let p = problems.first { activeWindow?.showMessage("❌ \(p)", error: true) }
-        if changed {
-            WindowCorners.refresh()
-            for w in windows {
-                for p in w.panes { p.styleChanged() }
-                w.sidebar.reload()
-                w.selectionChanged(in: w.activePane)
-            }
+        if changed { applySettingsRefresh() }
+    }
+
+    /// Refreshes every open window after a settings change — from the file watcher (above) or from a
+    /// GUI write (`updateSettings`, below). The GUI path calls this directly because it sets
+    /// `Theme.settings` before writing the file, so the watcher's own `changed` check is always false
+    /// by the time it notices that write; calling it there too would be redundant, not wrong.
+    private func applySettingsRefresh() {
+        WindowCorners.refresh()
+        for w in windows {
+            for p in w.panes { p.styleChanged() }
+            w.sidebar.reload()
+            w.selectionChanged(in: w.activePane)
         }
     }
 
@@ -224,7 +230,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func setQuitFinderOnLaunch(_ on: Bool) { updateSettings { $0.quitFinderOnLaunch = on } }
 
     /// Writes 1 key of settings.json without touching the rest of the file's text more than needed.
-    private func updateSettings(_ change: (inout Settings) -> Void) {
+    func updateSettings(_ change: (inout Settings) -> Void) {
         var s = Theme.settings
         change(&s)
         Theme.settings = s
@@ -234,6 +240,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let text = (try? String(contentsOf: config.settingsURL, encoding: .utf8)) ?? ""
         let comments = text.split(separator: "\n", omittingEmptySubsequences: false).prefix { $0.hasPrefix("//") }.joined(separator: "\n")
         config.write((comments.isEmpty ? "" : comments + "\n\n") + String(decoding: data, as: UTF8.self) + "\n", to: config.settingsURL)
+        applySettingsRefresh()
     }
 
     func saveColumns(_ cols: [String]) {
