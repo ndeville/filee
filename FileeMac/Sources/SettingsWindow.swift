@@ -196,5 +196,6 @@ final class SettingsWindowController: NSWindowController, NSToolbarDelegate {
 
     @objc private func selectPane(_ sender: NSToolbarItem) {
         window?.contentView = panes[sender.itemIdentifier.rawValue]
+        window?.toolbar?.selectedItemIdentifier = sender.itemIdentifier
     }
 }
