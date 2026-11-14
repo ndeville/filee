@@ -1,0 +1,22 @@
+name: Tests
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: brew install xcodegen librsvg
+
+      - name: Build and run FileeCore unit tests
+        run: ./build.sh --test
+
+      - name: Run QA suite
+        run: python3 qa.py
