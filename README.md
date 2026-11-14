@@ -37,10 +37,10 @@ I built Filee with Claude Code to replace Path Finder, and I use it every day. I
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/benchmark/benchmark-dark.svg">
-  <img src="assets/benchmark/benchmark-light.svg" alt="Benchmark on folders of 10,000 files. Launch: Filee 1.3 s, Path Finder 5.4 s, ForkLift 3.5 s, Finder always running. Open a folder: Filee 465 ms, Finder 634 ms, Path Finder 2.8 s, ForkLift 1.6 s. Memory: Filee 134 MB, Finder 200 MB, Path Finder 260 MB, ForkLift 208 MB. App size: Filee 2.1 MB, Finder 32 MB, Path Finder 69 MB, ForkLift 50 MB.">
+  <img src="assets/benchmark/benchmark-light.svg" alt="Benchmark on folders of 10,000 files, Apple M2 Pro, macOS 27.2.1, median of 5 runs. Launch: Filee 607 ms, Path Finder 4.3 s, Finder always running. Open a folder: Filee 230 ms, Finder 1.4 s, Path Finder 1.8 s. Memory: Filee 70 MB, Finder 94 MB, Path Finder 172 MB. App size: Filee 2.4 MB, Finder 31.4 MB, Path Finder 83 MB. ForkLift not installed on this machine.">
 </picture>
 
-`benchmark.py` measured these numbers. It opens each app on 2 folders of 10,000 files, captures the screen and reads the frames with OCR to find the moment the first files show. It never touches the apps it measures. To measure on your Mac, run `python3 benchmark.py`.
+`benchmark.py` measured these numbers on an Apple M2 Pro running macOS 27.2.1 (ForkLift wasn't installed, so it's not in this run). It opens each app on 2 folders of 10,000 files, captures the screen and reads the frames with OCR to find the moment the first files show. It never touches the apps it measures. To measure on your Mac, run `python3 benchmark.py`.
 
 Inside Filee, listing 10,000 files takes 66 to 83 ms, and the filter takes 7 to 8 ms per keystroke.
 
