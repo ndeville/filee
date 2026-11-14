@@ -106,23 +106,31 @@ final class TypeFilterBar: FlippedView {
         var used: [URL] = []
         var out: [FileTypeFilter: (CGImage, String)] = [:]
         for f in FileTypeFilter.allCases {
-            guard let ext = f.sampleExtension, let type = UTType(filenameExtension: ext),
-                  var app = ws.urlForApplication(toOpen: type) else { continue }
-            if used.contains(app),
-               let other = (fallbacks[f] ?? []).lazy.compactMap({ ws.urlForApplication(withBundleIdentifier: $0) })
-                   .first(where: { !used.contains($0) }) {
-                app = other
+            guard let ext = f.sampleExtension, let type = UTType(filenameExtension: ext) else { continue }
+            if var app = ws.urlForApplication(toOpen: type),
+               let bundleID = Bundle(url: app)?.bundleIdentifier,
+               f.recognizedAppBundleIDs.contains(bundleID) {
+                if used.contains(app),
+                   let other = (fallbacks[f] ?? []).lazy.compactMap({ ws.urlForApplication(withBundleIdentifier: $0) })
+                       .first(where: { !used.contains($0) }) {
+                    app = other
+                }
+                used.append(app)
+                let px = 64
+                guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: px, pixelsHigh: px, bitsPerSample: 8,
+                                                 samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,
+                                                 bytesPerRow: 0, bitsPerPixel: 0) else { continue }
+                NSGraphicsContext.saveGraphicsState()
+                NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+                ws.icon(forFile: app.path).draw(in: NSRect(x: 0, y: 0, width: px, height: px))
+                NSGraphicsContext.restoreGraphicsState()
+                if let image = rep.cgImage { out[f] = (image, app.deletingPathExtension().lastPathComponent) }
+            } else if let name = f.bundledFallbackIconName,
+                      let url = Bundle.main.url(forResource: name, withExtension: "png", subdirectory: "TypeIcons"),
+                      let image = NSImage(contentsOf: url),
+                      let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) {
+                out[f] = (cgImage, name)
             }
-            used.append(app)
-            let px = 64
-            guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: px, pixelsHigh: px, bitsPerSample: 8,
-                                             samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,
-                                             bytesPerRow: 0, bitsPerPixel: 0) else { continue }
-            NSGraphicsContext.saveGraphicsState()
-            NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
-            ws.icon(forFile: app.path).draw(in: NSRect(x: 0, y: 0, width: px, height: px))
-            NSGraphicsContext.restoreGraphicsState()
-            if let image = rep.cgImage { out[f] = (image, app.deletingPathExtension().lastPathComponent) }
         }
         return out
     }
