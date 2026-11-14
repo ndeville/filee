@@ -31,6 +31,9 @@ targets:
       - path: FileeMac/Resources/Templates
         type: folder
         buildPhase: resources
+      - path: FileeMac/Resources/TypeIcons
+        type: folder
+        buildPhase: resources
     dependencies:
       - package: FileeCore
     entitlements:

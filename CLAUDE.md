@@ -39,8 +39,11 @@ screenshots.py    README screenshots (assets/screenshots/, light and dark) and t
                   scripts, the old history bundle, HANDOVER.md (fsearch research), references/.
 ```
 
-No brand logos ship with the app. A folder shows its own icon in the sidebar from a `.filee-icon.svg` or `.filee-icon.png`
-inside it (`Icons.folderIconFiles`); a volume's logo comes from `volumeIcons` in `settings.json`.
+No brand logos ship with the app, except Apple's own app icons (Preview, Photos, QuickTime Player, TextEdit,
+Pages, Numbers, Keynote) used as safe, recognizable fallbacks for the type-filter bar when no real app is
+installed for a family — see `FileTypeFilter.bundledFallbackIconName`. A folder shows its own icon in the
+sidebar from a `.filee-icon.svg` or `.filee-icon.png` inside it (`Icons.folderIconFiles`); a volume's logo
+comes from `volumeIcons` in `settings.json`.
 
 ## Commands
 
