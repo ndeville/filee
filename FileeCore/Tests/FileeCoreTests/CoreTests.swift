@@ -506,6 +506,12 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(odd.cornerRadius, 10)
     }
 
+    func testQuitFinderOnLaunchDefaultsFalse() throws {
+        let decode = { (json: String) in try JSONDecoder().decode(Settings.self, from: Data(json.utf8)) }
+        XCTAssertEqual(try decode("{}").quitFinderOnLaunch, false)
+        XCTAssertEqual(try decode(#"{"quitFinderOnLaunch": true}"#).quitFinderOnLaunch, true)
+    }
+
     func testKeybindingParser() {
         let defaults = [KeyBinding(chords: [KeyChord("cmd+r")!], command: "rename")]
         let json = #"[{"key": "cmd+j k", "command": "jump", "args": "~/x"}, {"key": "cmd+r", "command": "-rename"}]"#
