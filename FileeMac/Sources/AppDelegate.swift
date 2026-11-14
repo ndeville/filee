@@ -200,6 +200,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             for w in windows {
                 for p in w.panes { p.styleChanged() }
                 w.sidebar.reload()
+                w.selectionChanged(in: w.activePane)
             }
         }
     }

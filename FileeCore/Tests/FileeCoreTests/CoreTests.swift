@@ -105,6 +105,23 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(Format.size(-1), "--")
     }
 
+    func testFormatSizeBase1000() {
+        // 1536 formats to "1.5 KB" in BOTH modes (1536/1024 = 1536/1000 rounds the same) — it doesn't
+        // actually distinguish them. 1_500_000 does: 1.5 MB at /1000 vs 1.4 MB at /1024, no rounding
+        // boundary ambiguity either way.
+        XCTAssertEqual(Format.size(1_500_000, base1000: true), "1.5 MB")
+        XCTAssertEqual(Format.size(1_500_000, base1000: false), "1.4 MB")
+    }
+
+    func testFormatSizeBase1000NegativeStaysPlaceholder() {
+        XCTAssertEqual(Format.size(-1, base1000: true), "--")
+    }
+
+    func testFormatSizeDefaultParameterUnchanged() {
+        // existing call style, no base1000 argument, must still compile and pass
+        XCTAssertEqual(Format.size(1536), "1.5 KB")
+    }
+
     func testFormatDate() {
         let now = Date()
         XCTAssertTrue(Format.date(now.timeIntervalSince1970, now: now).hasPrefix("today "))

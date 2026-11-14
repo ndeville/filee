@@ -130,7 +130,7 @@ final class SidebarController: NSObject, NSOutlineViewDataSource, NSOutlineViewD
                 if v?.volumeIsBrowsable == false { continue }
                 // A volume that reports nothing shows nothing rather than "0 B". The sidebar is narrow: "free" goes in the tooltip.
                 let free = v.flatMap(URL.freeSpace) ?? 0
-                out[url.path] = VolumeInfo(name: v?.volumeName ?? url.lastPathComponent, free: free > 0 ? Format.size(free) : "",
+                out[url.path] = VolumeInfo(name: v?.volumeName ?? url.lastPathComponent, free: free > 0 ? Format.size(free, base1000: Theme.settings.sizeUnitBase1000) : "",
                                            isLocal: v?.volumeIsLocal ?? true, isInternal: v?.volumeIsInternal ?? false)
             }
             DispatchQueue.main.async {

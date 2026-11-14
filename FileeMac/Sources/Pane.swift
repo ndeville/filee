@@ -385,7 +385,7 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
             let free = url.volumeFreeSpace
             DispatchQueue.main.async {
                 guard let self, ask == self.freeAsk else { return }
-                let text = Self.demoFreeSpace.map { "\($0) free" } ?? free.map { "\(Format.size($0)) free" } ?? ""
+                let text = Self.demoFreeSpace.map { "\($0) free" } ?? free.map { "\(Format.size($0, base1000: Theme.settings.sizeUnitBase1000)) free" } ?? ""
                 guard text != self.freeText else { return }
                 self.freeText = text
                 self.updateCount()
@@ -664,6 +664,7 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
         tabStrip.active = tabStrip.active
         typeBar.styleChanged()
         updateCount()
+        updateFreeSpace()
     }
 
     var selectedItems: [FileItem] { fileView.selectedItems }
