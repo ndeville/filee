@@ -44,6 +44,7 @@ public struct Settings: Codable, Equatable, Sendable {
     public var windowCorners: String
     /// Radius of the highlights inside the window (selection, current folder, tab, buttons). 0 = square, 4 = default.
     public var cornerRadius: Double
+    public var quitFinderOnLaunch: Bool
 
     public init() {
         fontName = "System"
@@ -70,6 +71,7 @@ public struct Settings: Codable, Equatable, Sendable {
         volumeIcons = [:]
         windowCorners = "rounded"
         cornerRadius = 4
+        quitFinderOnLaunch = false
     }
 
     public init(from decoder: Decoder) throws {
@@ -92,6 +94,7 @@ public struct Settings: Codable, Equatable, Sendable {
         volumeIcons = try c.decodeIfPresent([String: String].self, forKey: .volumeIcons) ?? d.volumeIcons
         windowCorners = try c.decodeIfPresent(String.self, forKey: .windowCorners) == "square" ? "square" : d.windowCorners
         cornerRadius = min(10, max(0, try c.decodeIfPresent(Double.self, forKey: .cornerRadius) ?? d.cornerRadius))
+        quitFinderOnLaunch = try c.decodeIfPresent(Bool.self, forKey: .quitFinderOnLaunch) ?? d.quitFinderOnLaunch
     }
 
     public static var fileText: String {

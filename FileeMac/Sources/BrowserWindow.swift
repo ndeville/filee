@@ -491,7 +491,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
             }
         case "stackClear": AppDelegate.shared.clearStack()
         case "cancelOperation": ops.cancelAll()
-        case "openSettings": AppDelegate.shared.openConfig(AppDelegate.shared.config.settingsURL)
+        case "openSettings": AppDelegate.shared.showSettingsWindow()
+        case "editSettingsFile": AppDelegate.shared.openConfig(AppDelegate.shared.config.settingsURL)
         case "openKeybindings": AppDelegate.shared.openConfig(AppDelegate.shared.config.keybindingsURL)
         case "openActions": AppDelegate.shared.openConfig(AppDelegate.shared.config.actionsURL)
         case "showMemory": showMessage("Memory footprint: \(Format.size(Int64(AppDelegate.memoryFootprint())))")

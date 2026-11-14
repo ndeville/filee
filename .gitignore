@@ -9,3 +9,6 @@ output/*/qa/
 # Private, never pushed: signing identity, history backup, personal notes and scripts
 .private/
 CLAUDE.local.md
+
+# Agent scratch: plan execution ledgers (superpowers:executing-plans)
+.superpowers/

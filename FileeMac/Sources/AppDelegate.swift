@@ -51,6 +51,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             w.showWindow(nil)
             w.window?.makeKeyAndOrderFront(nil)
         }
+        if !qa && Theme.settings.quitFinderOnLaunch { FinderIntegration.quitFinder() }
         w.activePane.focusContent()
         lastKey = w
         launchMilliseconds = Int((ProcessInfo.processInfo.systemUptime - launchStart) * 1000)
@@ -211,6 +212,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSWorkspace.shared.open(url)
         }
     }
+
+    func showSettingsWindow() { SettingsWindowController.shared.show() }
+
+    func setQuitFinderOnLaunch(_ on: Bool) { updateSettings { $0.quitFinderOnLaunch = on } }
 
     /// Writes 1 key of settings.json without touching the rest of the file's text more than needed.
     private func updateSettings(_ change: (inout Settings) -> Void) {
@@ -442,6 +447,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSMenuItem(title: "About Filee", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: ""),
             sep(),
             cmd("Settings…", "openSettings"),
+            cmd("Edit settings.json…", "editSettingsFile"),
             cmd("Keyboard Shortcuts…", "openKeybindings"),
             cmd("Custom Actions…", "openActions"),
             sep(),
@@ -538,7 +544,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// While text is edited (path field, rename), menu keys must not act on files: ⌘⌫ deletes text there.
-    static let commandsWhileEditing: Set<String> = ["palette", "editPath", "openSettings", "openKeybindings", "openActions", "newWindow", "switchPane"]
+    static let commandsWhileEditing: Set<String> = ["palette", "editPath", "openSettings", "editSettingsFile", "openKeybindings", "openActions", "newWindow", "switchPane"]
 
     @objc func validateMenuItem(_ item: NSMenuItem) -> Bool {
         guard item.action == #selector(menuCommand(_:)), let info = item.representedObject as? [String] else { return true }
