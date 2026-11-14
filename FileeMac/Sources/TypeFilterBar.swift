@@ -107,14 +107,20 @@ final class TypeFilterBar: FlippedView {
         var out: [FileTypeFilter: (CGImage, String)] = [:]
         for f in FileTypeFilter.allCases {
             guard let ext = f.sampleExtension, let type = UTType(filenameExtension: ext) else { continue }
-            if var app = ws.urlForApplication(toOpen: type),
-               let bundleID = Bundle(url: app)?.bundleIdentifier,
+            // A recognized app that's already used by an earlier family only counts if a fresh
+            // substitute is available; otherwise this family falls through to its bundled icon
+            // below rather than drawing a duplicate of another button's icon.
+            var app: URL?
+            if var candidate = ws.urlForApplication(toOpen: type),
+               let bundleID = Bundle(url: candidate)?.bundleIdentifier,
                f.recognizedAppBundleIDs.contains(bundleID) {
-                if used.contains(app),
-                   let other = (fallbacks[f] ?? []).lazy.compactMap({ ws.urlForApplication(withBundleIdentifier: $0) })
-                       .first(where: { !used.contains($0) }) {
-                    app = other
+                if used.contains(candidate) {
+                    candidate = (fallbacks[f] ?? []).lazy.compactMap({ ws.urlForApplication(withBundleIdentifier: $0) })
+                        .first(where: { !used.contains($0) }) ?? candidate
                 }
+                if !used.contains(candidate) { app = candidate }
+            }
+            if let app {
                 used.append(app)
                 let px = 64
                 guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: px, pixelsHigh: px, bitsPerSample: 8,
@@ -129,7 +135,9 @@ final class TypeFilterBar: FlippedView {
                       let url = Bundle.main.url(forResource: name, withExtension: "png", subdirectory: "TypeIcons"),
                       let image = NSImage(contentsOf: url),
                       let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) {
-                out[f] = (cgImage, name)
+                // "" as the app name: a bundled icon isn't necessarily what actually opens this
+                // family's files, so the tooltip shouldn't name an app that doesn't open them.
+                out[f] = (cgImage, "")
             }
         }
         return out

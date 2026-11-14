@@ -626,6 +626,11 @@ final class CoreTests: XCTestCase {
         XCTAssertTrue(FileTypeFilter.video.recognizedAppBundleIDs.contains("org.videolan.vlc"))
         XCTAssertTrue(FileTypeFilter.word.recognizedAppBundleIDs.contains("com.microsoft.Word"))
         XCTAssertTrue(FileTypeFilter.excel.recognizedAppBundleIDs.contains("com.microsoft.Excel"))
+        XCTAssertTrue(FileTypeFilter.images.recognizedAppBundleIDs.contains("com.apple.Preview"))
+        // TextEdit is Markdown's own bundled fallback icon: if Word also recognized it as a real
+        // app, a Mac with TextEdit as the default for both .docx and .md would show 2 identical
+        // buttons (Word's real TextEdit icon and Markdown's bundled TextEdit icon).
+        XCTAssertFalse(FileTypeFilter.word.recognizedAppBundleIDs.contains("com.apple.TextEdit"))
     }
 
     func testFileTypeFilterBundledFallbackIcons() {

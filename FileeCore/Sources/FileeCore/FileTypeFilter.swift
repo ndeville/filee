@@ -60,14 +60,16 @@ public enum FileTypeFilter: String, CaseIterable, Sendable {
         case .pdf: return ["com.apple.Preview", "com.adobe.Reader", "com.adobe.Acrobat.Pro",
                             "com.adobe.Acrobat.Pro.continuous", "com.readdle.PDFExpert-Mac", "com.foxitsoftware.FoxitReader"]
         case .powerpoint: return ["com.microsoft.Powerpoint", "com.apple.iWork.Keynote", "org.libreoffice.script"]
-        case .word: return ["com.microsoft.Word", "com.apple.iWork.Pages", "org.libreoffice.script", "com.apple.TextEdit"]
+        // TextEdit is deliberately not here: it's Markdown's bundled fallback icon, and Word already
+        // has a bundled fallback of its own (Pages) if TextEdit is the only thing installed.
+        case .word: return ["com.microsoft.Word", "com.apple.iWork.Pages", "org.libreoffice.script"]
         case .excel: return ["com.microsoft.Excel", "com.apple.iWork.Numbers", "org.libreoffice.script"]
         case .markdown: return ["com.apple.TextEdit", "com.panic.Nova", "com.macromates.TextMate",
                                  "com.sublimetext.4", "com.sublimetext.3", "com.barebones.bbedit",
                                  "com.coteditor.CotEditor", "md.obsidian", "abnerworks.Typora", "com.brettterpstra.marked2"]
         case .video: return ["com.colliderli.iina", "org.videolan.vlc", "com.apple.QuickTimePlayerX"]
-        case .images: return ["com.apple.Photos", "com.seriflabs.affinityphoto2", "com.seriflabs.affinityphoto",
-                               "com.adobe.Photoshop", "com.pixelmatorteam.pixelmator.x"]
+        case .images: return ["com.apple.Preview", "com.apple.Photos", "com.seriflabs.affinityphoto2",
+                               "com.seriflabs.affinityphoto", "com.adobe.Photoshop", "com.pixelmatorteam.pixelmator.x"]
         }
     }
 
