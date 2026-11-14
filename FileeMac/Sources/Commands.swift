@@ -110,7 +110,8 @@ enum CommandCatalog {
         .init(id: "stackClear", title: "Clear Drop Stack", key: nil, args: nil),
         // App
         .init(id: "cancelOperation", title: "Cancel Running Operation", key: nil, args: nil),
-        .init(id: "openSettings", title: "Open Settings (settings.json)", key: "cmd+,", args: nil),
+        .init(id: "openSettings", title: "Settings…", key: "cmd+,", args: nil),
+        .init(id: "editSettingsFile", title: "Edit settings.json…", key: nil, args: nil),
         .init(id: "openKeybindings", title: "Open Keyboard Shortcuts (keybindings.json)", key: nil, args: nil),
         .init(id: "openActions", title: "Open Custom Actions (actions.json)", key: nil, args: nil),
         .init(id: "showMemory", title: "Show Memory Use", key: nil, args: nil),
