@@ -345,6 +345,18 @@ def suites(fx: dict) -> dict:
             {"op": "wait", "ms": 300},
             {"op": "expect", "label": "filee://reveal (the CLI's path) still uses the active pane, revealInNewTab notwithstanding",
              "tabs": 1, "path": A},
+            # hideSingleTabBar: the tab bar hides with 1 tab, shows again with 2, and reacts live (not
+            # just at pane creation) when closing back down to 1.
+            {"op": "settings", "set": {"hideSingleTabBar": True}},
+            {"op": "wait", "ms": 300},
+            {"op": "expect", "label": "hideSingleTabBar: hides with a single tab", "tabBarHidden": True},
+            {"op": "key", "keys": "cmd+t"},
+            {"op": "expect", "label": "hideSingleTabBar: shows again with a 2nd tab", "tabs": 2, "tabBarHidden": False},
+            {"op": "key", "keys": "cmd+w"},
+            {"op": "expect", "label": "hideSingleTabBar: hides live when closing back down to 1 tab", "tabs": 1, "tabBarHidden": True},
+            {"op": "settings", "set": {"hideSingleTabBar": False}},
+            {"op": "wait", "ms": 300},
+            {"op": "expect", "label": "hideSingleTabBar off: the bar shows again, live, with no tab-count change", "tabBarHidden": False},
         ],
         "filter": [
             {"op": "navigate", "pane": 0, "path": A},

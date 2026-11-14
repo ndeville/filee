@@ -30,7 +30,7 @@ final class PathField: NSTextField {
 /// The strip of tabs above a pane. More tabs than room: the strip scrolls (wheel or trackpad), keeps the active tab
 /// in view, and a chevron at its trailing edge lists the tabs that don't fit.
 final class TabStrip: FlippedView {
-    var titles: [String] = [] { didSet { revealActive = true; rebuild() } }
+    var titles: [String] = [] { didSet { isHidden = Theme.settings.hideSingleTabBar && titles.count <= 1; revealActive = true; rebuild() } }
     var active = 0 { didSet { revealActive = true; rebuild() } }
     var activePane = true { didSet { rebuild() } }
     var onSelect: ((Int) -> Void)?
@@ -308,14 +308,17 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
         let typeW = typeBar.isHidden ? 0 : typeBar.width + 10
         typeBar.frame = NSRect(x: b.width - typeW, y: accentH, width: typeBar.width, height: tabH)
         tabStrip.frame = NSRect(x: 0, y: accentH, width: b.width - typeW, height: tabH)
+        // The row tabStrip and typeBar share only fully collapses when both are hidden — typeBar can be
+        // showing its type-filter buttons even with a single (hidden) tab, and still needs the row.
+        let tabRowH: CGFloat = (tabStrip.isHidden && typeBar.isHidden) ? 0 : tabH
         let countW = min((b.width * 0.5).rounded(), ceil(countLabel.attributedStringValue.size().width) + 12)
         let countH = ceil(Theme.listSize * 1.3)
         let fieldH = (Theme.listSize * 1.35).rounded()
-        pathField.frame = NSRect(x: 10, y: accentH + tabH + ((pathH - fieldH) / 2).rounded(), width: b.width - countW - 20, height: fieldH)
-        crumbs.frame = NSRect(x: 5, y: accentH + tabH + 2, width: b.width - countW - 15, height: pathH - 4)
-        countLabel.frame = NSRect(x: b.width - countW - 6, y: accentH + tabH + ((pathH - countH) / 2).rounded(), width: countW, height: countH)
+        pathField.frame = NSRect(x: 10, y: accentH + tabRowH + ((pathH - fieldH) / 2).rounded(), width: b.width - countW - 20, height: fieldH)
+        crumbs.frame = NSRect(x: 5, y: accentH + tabRowH + 2, width: b.width - countW - 15, height: pathH - 4)
+        countLabel.frame = NSRect(x: b.width - countW - 6, y: accentH + tabRowH + ((pathH - countH) / 2).rounded(), width: countW, height: countH)
         countLabel.alignment = .right
-        let top = accentH + tabH + pathH
+        let top = accentH + tabRowH + pathH
         let filterH: CGFloat = filterBar.isHidden ? 0 : 34
         filterBar.frame = NSRect(x: 0, y: top, width: b.width, height: filterH)
         contentHost.frame = NSRect(x: 0, y: top + filterH, width: b.width, height: max(0, b.height - top - filterH))
@@ -668,6 +671,10 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
         typeBar.styleChanged()
         updateCount()
         updateFreeSpace()
+        // hideSingleTabBar: a setting change alone (no tab-count change) doesn't run tabStrip's own
+        // `titles` didSet, so re-evaluate it here and re-layout the row it shares with typeBar.
+        tabStrip.isHidden = Theme.settings.hideSingleTabBar && tabStrip.titles.count <= 1
+        layout()
     }
 
     var selectedItems: [FileItem] { fileView.selectedItems }

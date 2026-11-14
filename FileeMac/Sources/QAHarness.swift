@@ -619,6 +619,7 @@ final class QAHarness {
         if let t = step["tabs"] as? Int { ok = ok && p.tabs.count == t }
         if let o = step["overflow"] as? Bool { p.container.layoutSubtreeIfNeeded(); ok = ok && p.tabStrip.overflowShown == o && p.tabStrip.hiddenTabs.isEmpty == !o }
         if let v = step["activeTabInView"] as? Bool { ok = ok && p.tabStrip.activeTabInView == v }
+        if let h = step["tabBarHidden"] as? Bool { ok = ok && p.tabStrip.isHidden == h }
         if let a = step["activeTab"] as? Int { ok = ok && p.activeTab == a }
         if let q = step["query"] as? String { ok = ok && p.folderModel.query == q }
         if let c = step["contains"] as? [String: String] {
