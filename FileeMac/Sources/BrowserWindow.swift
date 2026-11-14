@@ -205,6 +205,17 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         return zoom.frame.maxX + 18
     }
 
+    /// The empty unified toolbar (used only to tall the windowed title bar) confuses AppKit's fullscreen size
+    /// math: the title bar's own red strip never draws, just a black gap at its height. Hiding the toolbar for
+    /// full screen avoids it; titleBarHeight's 32 px floor takes over since there's no toolbar height to reserve.
+    func windowWillEnterFullScreen(_ notification: Notification) {
+        window?.toolbar?.isVisible = false
+    }
+
+    func windowWillExitFullScreen(_ notification: Notification) {
+        window?.toolbar?.isVisible = true
+    }
+
     func windowDidEnterFullScreen(_ notification: Notification) { layoutAll() }
     func windowDidExitFullScreen(_ notification: Notification) { layoutAll() }
 
