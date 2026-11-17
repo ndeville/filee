@@ -35,8 +35,15 @@ public enum Archive {
         do {
             try run(["-x", "-k", zip, target])
         } catch {
+            // ditto refuses some zips that unzip reads: try it before giving up.
             try? FileManager.default.removeItem(atPath: target)
-            throw error
+            try FileManager.default.createDirectory(atPath: target, withIntermediateDirectories: false)
+            do {
+                try run(["-q", "-o", zip, "-d", target], tool: "/usr/bin/unzip")
+            } catch {
+                try? FileManager.default.removeItem(atPath: target)
+                throw error
+            }
         }
         // A zip that holds 1 folder of the same name: lift its content up 1 level.
         if let items = try? FileManager.default.contentsOfDirectory(atPath: target).filter({ $0 != "__MACOSX" && $0 != ".DS_Store" }),
@@ -54,9 +61,9 @@ public enum Archive {
         return target
     }
 
-    static func run(_ args: [String]) throws {
+    static func run(_ args: [String], tool: String = "/usr/bin/ditto") throws {
         let p = Process()
-        p.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
+        p.executableURL = URL(fileURLWithPath: tool)
         p.arguments = args
         let err = Pipe()
         p.standardError = err
@@ -65,7 +72,7 @@ public enum Archive {
         p.waitUntilExit()
         if p.terminationStatus != 0 {
             let msg = String(decoding: err.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
-            throw OperationError.failed("ditto", msg.trimmingCharacters(in: .whitespacesAndNewlines))
+            throw OperationError.failed((tool as NSString).lastPathComponent, msg.trimmingCharacters(in: .whitespacesAndNewlines))
         }
     }
 }

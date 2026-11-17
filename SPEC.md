@@ -237,7 +237,7 @@ Renames run in 2 steps through temporary names, so swaps (`a`→`b`, `b`→`a`) 
 
 ### 5.3 Archives (decision 26)
 
-Zip only, through `ditto`. ⌃⌘C compresses the selection to `<name>.zip` (1 item) or `Archive.zip` (several), next to the items. "Extract here" (palette, context menu) unpacks into a folder named after the zip.
+Zip only, through `ditto`. ⌃⌘C compresses the selection to `<name>.zip` (1 item) or `Archive.zip` (several), next to the items. "Extract here" (palette, context menu) unpacks into a folder named after the zip. Opening a zip (↩, double-click) does the same in Filee, not in Archive Utility: Archive Utility refuses some valid zips, such as a .pptx renamed to .zip ("unsupported format"). When `ditto` fails, Filee tries `/usr/bin/unzip`.
 
 ### 5.4 Custom actions (decisions 28, 47, 48)
 

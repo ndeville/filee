@@ -595,6 +595,7 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
             navigate(to: target.path)
             return
         }
+        if item.ext == "zip" { return extractZips([item.path]) }
         NSWorkspace.shared.open(url)
     }
 
@@ -603,8 +604,16 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
         if items.count == 1 {
             open(items[0])
         } else {
-            for it in items where !it.isFolder { NSWorkspace.shared.open(it.url) }
+            let files = items.filter { !$0.isFolder }
+            extractZips(files.filter { $0.ext == "zip" }.map(\.path))
+            for it in files where it.ext != "zip" { NSWorkspace.shared.open(it.url) }
         }
+    }
+
+    /// A zip opens in Filee: Archive Utility refuses some valid zips, such as an Office file renamed to .zip.
+    private func extractZips(_ zips: [String]) {
+        guard !zips.isEmpty else { return }
+        OperationCenter.shared.extract(zips) { [weak window] out in window?.selectInPanes(out) }
     }
 
     // MARK: Views
